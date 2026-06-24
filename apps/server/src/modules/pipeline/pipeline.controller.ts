@@ -1,7 +1,8 @@
 import { Response, NextFunction } from "express";
 import { randomUUID } from "node:crypto";
 import { StartPipelineInputSchema } from "@repo/schemas";
-import { inngest, events } from "@repo/inngest";
+import { inngest, events, PROCESSING_STAGES } from "@repo/inngest";
+import { StageModelsInputSchema, resolveStageModels } from "@repo/ai";
 import { AuthenticatedRequest } from "../../middleware/auth.middleware.js";
 import { AppError } from "../../middleware/error.middleware.js";
 
@@ -18,10 +19,14 @@ export const PipelineController = {
       }
 
       const { idea } = StartPipelineInputSchema.parse(req.body);
+      // Per-stage model selection (default + optional overrides), resolved to a
+      // concrete { stage -> "provider|model" } map for the pipeline's stages.
+      const modelInput = StageModelsInputSchema.parse(req.body);
+      const stageModels = resolveStageModels(modelInput, PROCESSING_STAGES);
       const pipelineId = randomUUID();
 
       await inngest.send(
-        events.pipelineRunRequested.create({ pipelineId, userId: req.user.id, idea })
+        events.pipelineRunRequested.create({ pipelineId, userId: req.user.id, idea, stageModels })
       );
 
       res.status(202).json({

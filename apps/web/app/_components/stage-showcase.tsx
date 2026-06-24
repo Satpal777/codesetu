@@ -27,15 +27,15 @@ export default function StageShowcase() {
           className="geist-card p-6"
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-[#8f8f8f]">{String(i + 1).padStart(2, "0")}</span>
+            <span className="font-mono text-xs text-[var(--gray-700)]">{String(i + 1).padStart(2, "0")}</span>
             <span
               className="h-2 w-2 rounded-full"
               style={{ background: stage.base }}
               aria-hidden
             />
           </div>
-          <h3 className="mt-8 text-lg font-semibold tracking-tight text-[#171717]">{stage.label}</h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-[#4d4d4d]">{stage.caption}</p>
+          <h3 className="mt-8 text-lg font-semibold tracking-tight text-[var(--gray-1000)]">{stage.label}</h3>
+          <p className="mt-1.5 text-sm leading-relaxed text-[var(--gray-900)]">{stage.caption}</p>
         </motion.div>
       ))}
     </div>

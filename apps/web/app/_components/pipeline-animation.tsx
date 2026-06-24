@@ -29,6 +29,7 @@ const N = STAGES.length;
 const STATION_FRACTIONS = STAGES.map((_, i) => (i + 0.5) / N);
 
 const EASE = [0.65, 0, 0.35, 1] as const;
+const PAPER = "var(--pipeline-paper)";
 
 /* Catmull-Rom control points -> a smooth wavy "road" across the canvas. */
 const ROAD_POINTS: [number, number][] = [
@@ -82,9 +83,9 @@ function PaperPlane({ traveling }: { traveling: boolean }) {
           transition={{ repeat: Infinity, duration: 0.4, ease: "linear" }}
         />
       )}
-      <path d="M-13,-8 L18,0 L-13,8 L-6,0 Z" fill="#FFFFFF" stroke={INK} strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M-13,-8 L18,0 L-13,8 L-6,0 Z" fill={PAPER} stroke={INK} strokeWidth="1.8" strokeLinejoin="round" />
       <path d="M-6,0 L18,0 M-13,8 L-6,0" fill="none" stroke={INK} strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M-13,-8 L-6,0 L-13,8 Z" fill="rgba(45,45,45,0.07)" />
+      <path d="M-13,-8 L-6,0 L-13,8 Z" fill="var(--pipeline-faint-ink)" />
     </g>
   );
 }
@@ -262,7 +263,7 @@ export default function PipelineAnimation() {
               >
                 <g transform={`translate(${pt.x} ${pt.y})`}>
                   {/* soft ground shadow */}
-                  <ellipse cx="0" cy="40" rx="30" ry="6" fill="rgba(45,45,45,0.10)" />
+                  <ellipse cx="0" cy="40" rx="30" ry="6" fill="var(--pipeline-faint-ink)" />
 
                   {/* paper tile */}
                   <g transform={`rotate(${rot})`}>
@@ -272,13 +273,13 @@ export default function PipelineAnimation() {
                       width="66"
                       height="62"
                       rx="11"
-                      fill="#FFFFFF"
+                      fill={PAPER}
                       stroke={INK}
                       strokeWidth="2.2"
                       style={{
                         filter: isReached
                           ? `drop-shadow(2px 4px 0px ${stage.base}66)`
-                          : "drop-shadow(2px 3px 0px rgba(45,45,45,0.12))",
+                          : "drop-shadow(2px 3px 0px var(--pipeline-faint-ink))",
                         transition: "filter 0.4s ease",
                       }}
                     />
@@ -385,13 +386,13 @@ export default function PipelineAnimation() {
                           width="132"
                           height="28"
                           rx="8"
-                          fill="#FFFFFF"
+                          fill={PAPER}
                           stroke={INK}
                           strokeWidth="1.8"
-                          style={{ filter: "drop-shadow(2px 3px 0px rgba(45,45,45,0.15))" }}
+                          style={{ filter: "drop-shadow(2px 3px 0px var(--pipeline-shadow))" }}
                         />
-                        <path d="M-6,6 L0,13 L6,6 Z" fill="#FFFFFF" stroke={INK} strokeWidth="1.8" strokeLinejoin="round" />
-                        <rect x="-6" y="5" width="12" height="3" fill="#FFFFFF" />
+                        <path d="M-6,6 L0,13 L6,6 Z" fill={PAPER} stroke={INK} strokeWidth="1.8" strokeLinejoin="round" />
+                        <rect x="-6" y="5" width="12" height="3" fill={PAPER} />
                         <text
                           x="0"
                           y="-2"

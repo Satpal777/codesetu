@@ -28,6 +28,9 @@ const pipelineRunRequestedSchema = z.object({
   pipelineId: z.string(),
   userId: z.string(),
   idea: z.string().min(1, "An idea is required to start a pipeline"),
+  // Resolved { stage -> "provider|model" } map. Picked in the UI, resolved
+  // server-side so each stage runs against the chosen provider/model.
+  stageModels: z.record(z.string(), z.string()),
 });
 
 const pipelineStageCompletedSchema = z.object({

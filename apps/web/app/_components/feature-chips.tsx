@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
  * ------------------------------------------------------------------ */
 
 const EASE = [0.175, 0.885, 0.32, 1.1] as const;
-const STROKE = "#171717";
+const STROKE = "var(--gray-1000)";
 
 function ShieldIcon() {
   return (
@@ -113,12 +113,12 @@ export default function FeatureChips() {
           transition={{ duration: 0.45, delay: i * 0.06, ease: EASE }}
           className="geist-card flex flex-col p-5"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#0000001a] bg-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--gray-alpha-300)] bg-[var(--background-100)]">
             {feature.icon}
           </span>
-          <h3 className="mt-5 text-[15px] font-semibold tracking-tight text-[#171717]">{feature.title}</h3>
-          <p className="mt-1.5 flex-1 text-sm leading-relaxed text-[#4d4d4d]">{feature.description}</p>
-          <span className="mt-4 inline-flex w-fit items-center rounded-md bg-[#f2f2f2] px-2 py-0.5 font-mono text-xs text-[#4d4d4d]">
+          <h3 className="mt-5 text-[15px] font-semibold tracking-tight text-[var(--gray-1000)]">{feature.title}</h3>
+          <p className="mt-1.5 flex-1 text-sm leading-relaxed text-[var(--gray-900)]">{feature.description}</p>
+          <span className="mt-4 inline-flex w-fit items-center rounded-md bg-[var(--gray-100)] px-2 py-0.5 font-mono text-xs text-[var(--gray-900)]">
             {feature.tag}
           </span>
         </motion.div>

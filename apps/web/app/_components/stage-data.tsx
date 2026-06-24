@@ -30,14 +30,15 @@ export const STAGES: Stage[] = [
   { id: "deploy", label: "Deploy", caption: "Shipped to production", base: "#F97316", tint: "#FDBA74" },
 ];
 
-export const INK = "#2D2D2D";
+export const INK = "var(--pipeline-ink)";
+const PAPER = "var(--pipeline-paper)";
 export const ICON_EASE = [0.22, 1, 0.36, 1] as const;
 
 function IconIdea({ active, base, tint }: { active: boolean; base: string; tint: string }) {
   return (
     <g>
       {/* thinker's head */}
-      <circle cx="0" cy="11" r="8" fill="#FFFFFF" stroke={INK} strokeWidth="2.1" />
+      <circle cx="0" cy="11" r="8" fill={PAPER} stroke={INK} strokeWidth="2.1" />
       <circle cx="-2.6" cy="10.5" r="1" fill={INK} />
       <circle cx="2.6" cy="10.5" r="1" fill={INK} />
       <path d="M-2.4,13.6 Q0,15.4 2.4,13.6" fill="none" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
@@ -76,11 +77,11 @@ function IconIdea({ active, base, tint }: { active: boolean; base: string; tint:
         })}
         <motion.path
           d="M-5.5,-1 a5.5,5.5 0 1,1 11,0 c0,2.6 -1.7,4 -2.5,5.4 h-6 c-0.8,-1.4 -2.5,-2.8 -2.5,-5.4 Z"
-          fill={active ? tint : "#FFFFFF"}
+          fill={active ? tint : PAPER}
           stroke={INK}
           strokeWidth="2"
           strokeLinejoin="round"
-          animate={{ fill: active ? tint : "#FFFFFF" }}
+          animate={{ fill: active ? tint : PAPER }}
           transition={{ duration: 0.4 }}
         />
         <path
@@ -103,7 +104,7 @@ function IconDocument({ active, base }: { active: boolean; base: string }) {
     <g>
       <path
         d="M-12,-16 H6 L13,-9 V16 a2,2 0 0 1 -2,2 H-12 a2,2 0 0 1 -2,-2 V-14 a2,2 0 0 1 2,-2 Z"
-        fill="#FFFFFF"
+        fill={PAPER}
         stroke={INK}
         strokeWidth="2"
         strokeLinejoin="round"
@@ -126,7 +127,7 @@ function IconDocument({ active, base }: { active: boolean; base: string }) {
           y={y}
           height="2.8"
           rx="1.4"
-          fill="rgba(45,45,45,0.5)"
+          fill="var(--pipeline-muted-ink)"
           initial={false}
           animate={{ width: active ? (i === lines.length - 1 ? 10 : 18) : 0, opacity: active ? 1 : 0 }}
           transition={{ duration: 0.4, delay: active ? 0.18 + i * 0.13 : 0, ease: ICON_EASE }}
@@ -140,14 +141,14 @@ function IconTasks({ active, base }: { active: boolean; base: string }) {
   const rows = [0, 1, 2];
   return (
     <g>
-      <rect x="-12" y="-15" width="24" height="32" rx="4" fill="#FFFFFF" stroke={INK} strokeWidth="2" />
+      <rect x="-12" y="-15" width="24" height="32" rx="4" fill={PAPER} stroke={INK} strokeWidth="2" />
       <rect
         x="-5"
         y="-18.5"
         width="10"
         height="5.5"
         rx="2"
-        fill={active ? base : "#FFFFFF"}
+        fill={active ? base : PAPER}
         stroke={INK}
         strokeWidth="1.8"
       />
@@ -161,7 +162,7 @@ function IconTasks({ active, base }: { active: boolean; base: string }) {
               width="7"
               height="7"
               rx="2"
-              fill="#FFFFFF"
+              fill={PAPER}
               stroke={INK}
               strokeWidth="1.6"
               animate={{ stroke: active ? base : INK }}
@@ -183,7 +184,7 @@ function IconTasks({ active, base }: { active: boolean; base: string }) {
               y={y - 1.6}
               height="3.2"
               rx="1.6"
-              fill="rgba(45,45,45,0.42)"
+              fill="var(--pipeline-muted-ink)"
               initial={false}
               animate={{ width: active ? 7 : 5, opacity: active ? 0.6 : 0.3 }}
               transition={{ delay: active ? i * 0.2 : 0 }}
@@ -198,8 +199,8 @@ function IconTasks({ active, base }: { active: boolean; base: string }) {
 function IconCode({ active, base }: { active: boolean; base: string }) {
   return (
     <g>
-      <rect x="-15" y="-13" width="30" height="26" rx="4" fill="#FFFFFF" stroke={INK} strokeWidth="2" />
-      <line x1="-15" y1="-6.5" x2="15" y2="-6.5" stroke="rgba(45,45,45,0.25)" strokeWidth="1.4" />
+      <rect x="-15" y="-13" width="30" height="26" rx="4" fill={PAPER} stroke={INK} strokeWidth="2" />
+      <line x1="-15" y1="-6.5" x2="15" y2="-6.5" stroke="var(--pipeline-soft-ink)" strokeWidth="1.4" />
       <circle cx="-11" cy="-9.8" r="1.3" fill="#EF4444" />
       <circle cx="-7" cy="-9.8" r="1.3" fill="#F59E0B" />
       <circle cx="-3" cy="-9.8" r="1.3" fill="#22C55E" />
@@ -245,16 +246,16 @@ function IconReview({ active, base }: { active: boolean; base: string }) {
   return (
     <g>
       {/* diff sheet behind the lens */}
-      <rect x="-13" y="-15" width="20" height="28" rx="3" fill="#FFFFFF" stroke={INK} strokeWidth="1.8" />
+      <rect x="-13" y="-15" width="20" height="28" rx="3" fill={PAPER} stroke={INK} strokeWidth="1.8" />
       <rect x="-10" y="-10" width="4" height="2.6" rx="1" fill="#22C55E" />
-      <rect x="-4.5" y="-10" width="9" height="2.6" rx="1.3" fill="rgba(45,45,45,0.28)" />
+      <rect x="-4.5" y="-10" width="9" height="2.6" rx="1.3" fill="var(--pipeline-soft-ink)" />
       <rect x="-10" y="-5" width="4" height="2.6" rx="1" fill="#EF4444" />
-      <rect x="-4.5" y="-5" width="7" height="2.6" rx="1.3" fill="rgba(45,45,45,0.28)" />
+      <rect x="-4.5" y="-5" width="7" height="2.6" rx="1.3" fill="var(--pipeline-soft-ink)" />
       <rect x="-10" y="0" width="4" height="2.6" rx="1" fill="#22C55E" />
-      <rect x="-4.5" y="0" width="8" height="2.6" rx="1.3" fill="rgba(45,45,45,0.28)" />
+      <rect x="-4.5" y="0" width="8" height="2.6" rx="1.3" fill="var(--pipeline-soft-ink)" />
 
       {/* magnifier */}
-      <circle cx="5" cy="3" r="9" fill="rgba(255,255,255,0.65)" stroke={INK} strokeWidth="2.1" />
+      <circle cx="5" cy="3" r="9" fill="var(--pipeline-glass)" stroke={INK} strokeWidth="2.1" />
       <line x1="11.5" y1="9.5" x2="17" y2="15" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
       <motion.path
         d="M0.5,3 l3,3.2 l5.5,-6.4"
@@ -304,12 +305,12 @@ function IconDeploy({ active, base, tint }: { active: boolean; base: string; tin
         {/* body */}
         <path
           d="M0,-18 c6,4.5 8.5,12 8.5,19.5 0,6 -2.2,10.5 -2.2,10.5 H-6.3 s-2.2,-4.5 -2.2,-10.5 C-10.5,-6 -6,-13.5 0,-18 Z"
-          fill={active ? tint : "#FFFFFF"}
+          fill={active ? tint : PAPER}
           stroke={INK}
           strokeWidth="2"
           strokeLinejoin="round"
         />
-        <circle cx="0" cy="-3" r="3.6" fill="#FFFFFF" stroke={base} strokeWidth="2" />
+        <circle cx="0" cy="-3" r="3.6" fill={PAPER} stroke={base} strokeWidth="2" />
         <path d="M-8,3 l-5,7 5,-1.4 Z" fill={base} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
         <path d="M8,3 l5,7 -5,-1.4 Z" fill={base} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
       </motion.g>

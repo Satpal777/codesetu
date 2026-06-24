@@ -12,17 +12,17 @@ import {
 } from "../_lib/projects";
 
 const STATUS: Record<ProjectStatus, { label: string; dot: string; text: string }> = {
-  running: { label: "Running", dot: "#006bff", text: "#006bff" },
-  awaiting_input: { label: "Needs you", dot: "#ffae00", text: "#b25c00" },
-  completed: { label: "Completed", dot: "#1a7f37", text: "#1a7f37" },
-  failed: { label: "Failed", dot: "#d8001b", text: "#d8001b" },
+  running: { label: "Running", dot: "var(--blue-700)", text: "var(--blue-700)" },
+  awaiting_input: { label: "Needs you", dot: "var(--amber-700)", text: "var(--amber-700)" },
+  completed: { label: "Completed", dot: "var(--green-800)", text: "var(--green-800)" },
+  failed: { label: "Failed", dot: "var(--red-900)", text: "var(--red-900)" },
 };
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
   const s = STATUS[status];
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#0000001a] bg-white px-2.5 py-1 text-[12px] font-medium"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-100)] px-2.5 py-1 text-[12px] font-medium"
       style={{ color: s.text }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.dot }} />
@@ -42,8 +42,8 @@ function StageProgress({ status, currentStage }: Pick<Project, "status" | "curre
     <div>
       <div className="flex items-center gap-1">
         {STAGES.map((stage, i) => {
-          let color = "#ebebeb"; // future
-          if (done || i < currentIdx) color = "#171717"; // completed
+          let color = "var(--gray-200)"; // future
+          if (done || i < currentIdx) color = "var(--gray-1000)"; // completed
           else if (i === currentIdx) color = active; // in progress
           return (
             <span
@@ -54,9 +54,9 @@ function StageProgress({ status, currentStage }: Pick<Project, "status" | "curre
           );
         })}
       </div>
-      <p className="mt-2 text-[12px] text-[#8f8f8f]">
+      <p className="mt-2 text-[12px] text-[var(--gray-700)]">
         {done ? "Released" : stageLabel(currentStage)}
-        <span className="text-[#c9c9c9]"> · {reached}/{STAGE_COUNT}</span>
+        <span className="text-[var(--gray-500)]"> · {reached}/{STAGE_COUNT}</span>
       </p>
     </div>
   );
@@ -69,13 +69,13 @@ export default function ProjectCard({ project }: { project: Project }) {
       className="geist-card group flex flex-col p-5 focus-visible:outline-none"
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[#171717]">
+        <h3 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--gray-1000)]">
           {project.title || "Untitled project"}
         </h3>
         <StatusBadge status={project.status} />
       </div>
 
-      <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-[13px] leading-relaxed text-[#8f8f8f]">
+      <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-[13px] leading-relaxed text-[var(--gray-700)]">
         {project.prompt}
       </p>
 
@@ -83,7 +83,7 @@ export default function ProjectCard({ project }: { project: Project }) {
         <StageProgress status={project.status} currentStage={project.currentStage} />
       </div>
 
-      <p className="mt-4 text-[12px] text-[#a8a8a8]">Updated {relativeTime(project.updatedAt)}</p>
+      <p className="mt-4 text-[12px] text-[var(--gray-600)]">Updated {relativeTime(project.updatedAt)}</p>
     </Link>
   );
 }

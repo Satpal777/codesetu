@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL_ID } from "@repo/ai";
 import { inngest } from "../client.js";
 import { events, PROCESSING_STAGES, type ProcessingStage } from "../events.js";
 import { stageHandlers, type StageContext } from "./pipeline.stages.js";
@@ -29,13 +30,14 @@ export const runPipeline = inngest.createFunction(
     },
   },
   async ({ event, step, logger }) => {
-    const { pipelineId, userId, idea } = event.data;
+    const { pipelineId, userId, idea, stageModels } = event.data;
     logger.info("pipeline.start", { pipelineId });
 
     const artifacts = {} as Record<ProcessingStage, unknown>;
 
     for (const stage of PROCESSING_STAGES) {
-      const ctx: StageContext = { pipelineId, userId, idea, artifacts };
+      const model = stageModels[stage] ?? DEFAULT_MODEL_ID;
+      const ctx: StageContext = { pipelineId, userId, idea, model, artifacts };
 
       // Durable boundary: this is where retries and replay happen.
       artifacts[stage] = await step.run(`stage:${stage}`, () => stageHandlers[stage](ctx));

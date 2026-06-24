@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import PipelineAnimation from "./_components/pipeline-animation";
 import StageShowcase from "./_components/stage-showcase";
 import FeatureChips from "./_components/feature-chips";
+import ThemeSwitch from "./_components/theme-switch";
 import { UserResponse } from "@repo/schemas";
 import { authClient } from "./_lib/auth-client";
 
@@ -25,10 +26,10 @@ function Wordmark({ size = "md" }: { size?: "sm" | "md" }) {
   const text = size === "sm" ? "text-sm" : "text-[15px]";
   return (
     <span className="flex items-center gap-2">
-      <span className={`flex ${box} items-center justify-center rounded-md bg-[#171717] font-semibold text-white`}>
+      <span className={`flex ${box} items-center justify-center rounded-md bg-[var(--gray-1000)] font-semibold text-[var(--background-100)]`}>
         C
       </span>
-      <span className={`${text} font-semibold tracking-tight text-[#171717]`}>CodeSetu</span>
+      <span className={`${text} font-semibold tracking-tight text-[var(--gray-1000)]`}>CodeSetu</span>
     </span>
   );
 }
@@ -55,29 +56,30 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-[#171717]">
+    <div className="flex min-h-screen flex-col bg-[var(--background-100)] text-[var(--gray-1000)]">
       {/* NAVIGATION */}
-      <header className="sticky top-0 z-40 border-b border-[#00000014] bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[var(--gray-alpha-400)] bg-[var(--header-background)] backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <a href="#top" aria-label="CodeSetu home">
             <Wordmark />
           </a>
 
           <div className="hidden items-center gap-8 md:flex">
-            <a href="#how" className="text-sm text-[#4d4d4d] transition-colors hover:text-[#171717]">
+            <a href="#how" className="text-sm text-[var(--gray-900)] transition-colors hover:text-[var(--gray-1000)]">
               How it works
             </a>
-            <a href="#steps" className="text-sm text-[#4d4d4d] transition-colors hover:text-[#171717]">
+            <a href="#steps" className="text-sm text-[var(--gray-900)] transition-colors hover:text-[var(--gray-1000)]">
               Pipeline
             </a>
-            <a href="#features" className="text-sm text-[#4d4d4d] transition-colors hover:text-[#171717]">
+            <a href="#features" className="text-sm text-[var(--gray-900)] transition-colors hover:text-[var(--gray-1000)]">
               Features
             </a>
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemeSwitch className="mr-1" />
             {loadingUser ? (
-              <div className="h-8 w-20 animate-pulse rounded-md bg-[#f2f2f2]" />
+              <div className="h-8 w-20 animate-pulse rounded-md bg-[var(--gray-100)]" />
             ) : user ? (
               <>
                 <span className="flex items-center gap-2 pr-1">
@@ -85,10 +87,10 @@ export default function Home() {
                   <img
                     src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`}
                     alt=""
-                    className="h-7 w-7 rounded-full border border-[#00000014] object-cover"
+                    className="h-7 w-7 rounded-full border border-[var(--gray-alpha-400)] object-cover"
                     referrerPolicy="no-referrer"
                   />
-                  <span className="hidden text-sm font-medium text-[#171717] sm:inline">
+                  <span className="hidden text-sm font-medium text-[var(--gray-1000)] sm:inline">
                     {user.name.split(" ")[0]}
                   </span>
                 </span>
@@ -117,9 +119,9 @@ export default function Home() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: EASE }}
-            className="inline-flex items-center gap-2 rounded-full border border-[#0000001a] bg-white px-3.5 py-1.5 text-[13px] font-medium text-[#4d4d4d]"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-100)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--gray-900)]"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#006bff]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--blue-700)]" />
             Powered by AI
           </motion.span>
 
@@ -127,7 +129,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.05, ease: EASE }}
-            className="mt-8 max-w-3xl text-balance text-4xl font-semibold leading-[1.05] tracking-[-0.03em] text-[#171717] sm:text-6xl md:text-7xl"
+            className="mt-8 max-w-3xl text-balance text-4xl font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--gray-1000)] sm:text-6xl md:text-7xl"
           >
             From idea to shipped product, entirely automated
           </motion.h1>
@@ -136,7 +138,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.12, ease: EASE }}
-            className="mt-6 max-w-xl text-lg leading-relaxed text-[#4d4d4d] md:text-xl"
+            className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--gray-900)] md:text-xl"
           >
             Describe what you want in plain words. CodeSetu plans, builds, reviews, and ships it — end to end.
           </motion.p>
@@ -158,25 +160,25 @@ export default function Home() {
             </a>
           </motion.div>
 
-          <p className="mt-5 text-[13px] text-[#8f8f8f]">No setup required · Sign in with Google</p>
+          <p className="mt-5 text-[13px] text-[var(--gray-700)]">No setup required · Sign in with Google</p>
         </section>
 
         {/* IDEA → PRODUCTION ANIMATION (kept as the centerpiece) */}
-        <section id="how" className="border-t border-[#00000014] bg-[#fafafa]">
+        <section id="how" className="border-t border-[var(--gray-alpha-400)] bg-[var(--background-200)]">
           <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
             <motion.div {...reveal()} className="mx-auto max-w-2xl text-center">
-              <p className="font-mono text-xs uppercase tracking-[0.12em] text-[#8f8f8f]">How it works</p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#171717] md:text-4xl">
+              <p className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--gray-700)]">How it works</p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)] md:text-4xl">
                 From idea to production
               </h2>
-              <p className="mt-4 text-lg leading-relaxed text-[#4d4d4d]">
+              <p className="mt-4 text-lg leading-relaxed text-[var(--gray-900)]">
                 Watch a single spark travel through every stage of the pipeline — documented, built, reviewed, and deployed.
               </p>
             </motion.div>
 
             <motion.div
               {...reveal(0.1)}
-              className="mt-14 overflow-hidden rounded-2xl border border-[#0000001a] bg-white p-4 md:p-8"
+              className="mt-14 overflow-hidden rounded-2xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] p-4 md:p-8"
             >
               <PipelineAnimation />
             </motion.div>
@@ -186,11 +188,11 @@ export default function Home() {
         {/* SIX STEPS */}
         <section id="steps" className="mx-auto max-w-6xl px-6 py-24 md:py-32">
           <motion.div {...reveal()} className="mx-auto max-w-2xl text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.12em] text-[#8f8f8f]">Pipeline</p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#171717] md:text-4xl">
+            <p className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--gray-700)]">Pipeline</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)] md:text-4xl">
               Six steps, one flow
             </h2>
-            <p className="mt-4 text-lg leading-relaxed text-[#4d4d4d]">
+            <p className="mt-4 text-lg leading-relaxed text-[var(--gray-900)]">
               Every idea moves through the same calm, repeatable path — no handoffs, no surprises.
             </p>
           </motion.div>
@@ -201,14 +203,14 @@ export default function Home() {
         </section>
 
         {/* FEATURES */}
-        <section id="features" className="border-t border-[#00000014] bg-[#fafafa]">
+        <section id="features" className="border-t border-[var(--gray-alpha-400)] bg-[var(--background-200)]">
           <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
             <motion.div {...reveal()} className="mx-auto max-w-2xl text-center">
-              <p className="font-mono text-xs uppercase tracking-[0.12em] text-[#8f8f8f]">Under the hood</p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#171717] md:text-4xl">
+              <p className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--gray-700)]">Under the hood</p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)] md:text-4xl">
                 Safe and durable by default
               </h2>
-              <p className="mt-4 text-lg leading-relaxed text-[#4d4d4d]">
+              <p className="mt-4 text-lg leading-relaxed text-[var(--gray-900)]">
                 Production-grade guardrails are built into every pipeline, not bolted on afterward.
               </p>
             </motion.div>
@@ -220,15 +222,15 @@ export default function Home() {
         </section>
 
         {/* FINAL CTA */}
-        <section className="border-t border-[#00000014]">
+        <section className="border-t border-[var(--gray-alpha-400)]">
           <div className="mx-auto flex max-w-6xl flex-col items-center px-6 py-24 text-center md:py-32">
             <motion.h2
               {...reveal()}
-              className="max-w-2xl text-3xl font-semibold tracking-[-0.02em] text-[#171717] md:text-5xl"
+              className="max-w-2xl text-3xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)] md:text-5xl"
             >
               Ready to ship your next idea?
             </motion.h2>
-            <motion.p {...reveal(0.08)} className="mt-5 max-w-md text-lg leading-relaxed text-[#4d4d4d]">
+            <motion.p {...reveal(0.08)} className="mt-5 max-w-md text-lg leading-relaxed text-[var(--gray-900)]">
               Start with a single sentence. Watch it become a deployed product.
             </motion.p>
             <motion.button
@@ -243,10 +245,10 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#00000014]">
+      <footer className="border-t border-[var(--gray-alpha-400)]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 sm:flex-row">
           <Wordmark size="sm" />
-          <p className="text-[13px] text-[#8f8f8f]">
+          <p className="text-[13px] text-[var(--gray-700)]">
             © {new Date().getFullYear()} CodeSetu. All rights reserved.
           </p>
         </div>

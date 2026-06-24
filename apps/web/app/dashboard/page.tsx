@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { UserResponse } from "@repo/schemas";
 import { authClient } from "../_lib/auth-client";
+import ThemeSwitch from "../_components/theme-switch";
 import { listProjects, type Project } from "./_lib/projects";
 import NewProjectBox from "./_components/new-project-box";
 import ProjectCard from "./_components/project-card";
@@ -17,10 +18,10 @@ type LoadState = "loading" | "ready" | "error";
 function Brand() {
   return (
     <Link href="/" aria-label="CodeSetu home" className="flex items-center gap-2">
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#171717] text-sm font-semibold text-white">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--gray-1000)] text-sm font-semibold text-[var(--background-100)]">
         C
       </span>
-      <span className="text-[15px] font-semibold tracking-tight text-[#171717]">CodeSetu</span>
+      <span className="text-[15px] font-semibold tracking-tight text-[var(--gray-1000)]">CodeSetu</span>
     </Link>
   );
 }
@@ -74,21 +75,24 @@ export default function DashboardPage() {
   // --- Auth gates ---------------------------------------------------------
   if (loadingUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#ebebeb] border-t-[#171717]" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background-100)]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--gray-200)] border-t-[var(--gray-1000)]" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white px-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--background-100)] px-6 text-center">
+        <div className="absolute right-6 top-6">
+          <ThemeSwitch />
+        </div>
         <Brand />
         <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[#171717]">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)]">
             Sign in to open your dashboard
           </h1>
-          <p className="mt-2 text-[15px] text-[#8f8f8f]">Your projects live here once you’re in.</p>
+          <p className="mt-2 text-[15px] text-[var(--gray-700)]">Your projects live here once you’re in.</p>
         </div>
         <button onClick={handleGoogleLogin} className="geist-btn geist-btn-lg geist-btn-primary">
           Continue with Google
@@ -99,20 +103,21 @@ export default function DashboardPage() {
 
   // --- Dashboard ----------------------------------------------------------
   return (
-    <div className="flex min-h-screen flex-col bg-[#fafafa] text-[#171717]">
-      <header className="sticky top-0 z-40 border-b border-[#00000014] bg-white/80 backdrop-blur-md">
+    <div className="flex min-h-screen flex-col bg-[var(--background-200)] text-[var(--gray-1000)]">
+      <header className="sticky top-0 z-40 border-b border-[var(--gray-alpha-400)] bg-[var(--header-background)] backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
           <Brand />
           <div className="flex items-center gap-3">
+            <ThemeSwitch />
             <span className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`}
                 alt=""
-                className="h-7 w-7 rounded-full border border-[#00000014] object-cover"
+                className="h-7 w-7 rounded-full border border-[var(--gray-alpha-400)] object-cover"
                 referrerPolicy="no-referrer"
               />
-              <span className="hidden text-sm font-medium text-[#171717] sm:inline">
+              <span className="hidden text-sm font-medium text-[var(--gray-1000)] sm:inline">
                 {user.name.split(" ")[0]}
               </span>
             </span>
@@ -129,10 +134,10 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE }}
         >
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[#171717] md:text-3xl">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)] md:text-3xl">
             Welcome back, {user.name.split(" ")[0]}
           </h1>
-          <p className="mt-2 text-[15px] text-[#8f8f8f]">
+          <p className="mt-2 text-[15px] text-[var(--gray-700)]">
             Turn an idea into a shipped product, one pipeline at a time.
           </p>
         </motion.div>
@@ -148,9 +153,9 @@ export default function DashboardPage() {
 
         <section className="mt-14">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold tracking-[-0.01em] text-[#171717]">Your projects</h2>
+            <h2 className="text-sm font-semibold tracking-[-0.01em] text-[var(--gray-1000)]">Your projects</h2>
             {state === "ready" && projects.length > 0 && (
-              <span className="text-[13px] text-[#a8a8a8]">{projects.length} total</span>
+              <span className="text-[13px] text-[var(--gray-600)]">{projects.length} total</span>
             )}
           </div>
 
@@ -158,9 +163,9 @@ export default function DashboardPage() {
             {state === "loading" && <ProjectsSkeleton />}
 
             {state === "error" && (
-              <div className="rounded-2xl border border-[#0000001a] bg-white px-6 py-12 text-center">
-                <p className="text-[15px] font-medium text-[#171717]">Couldn’t load your projects</p>
-                <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-[#8f8f8f]">{error}</p>
+              <div className="rounded-2xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] px-6 py-12 text-center">
+                <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn’t load your projects</p>
+                <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-[var(--gray-700)]">{error}</p>
                 <button onClick={() => load()} className="geist-btn geist-btn-secondary mt-5">
                   Try again
                 </button>
@@ -187,12 +192,12 @@ function ProjectsSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-xl border border-[#0000001a] bg-white p-5">
-          <div className="h-4 w-2/3 animate-pulse rounded bg-[#f2f2f2]" />
-          <div className="mt-3 h-3 w-full animate-pulse rounded bg-[#f2f2f2]" />
-          <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-[#f2f2f2]" />
-          <div className="mt-6 h-1.5 w-full animate-pulse rounded-full bg-[#f2f2f2]" />
-          <div className="mt-4 h-3 w-24 animate-pulse rounded bg-[#f2f2f2]" />
+        <div key={i} className="rounded-xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] p-5">
+          <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--gray-100)]" />
+          <div className="mt-3 h-3 w-full animate-pulse rounded bg-[var(--gray-100)]" />
+          <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-[var(--gray-100)]" />
+          <div className="mt-6 h-1.5 w-full animate-pulse rounded-full bg-[var(--gray-100)]" />
+          <div className="mt-4 h-3 w-24 animate-pulse rounded bg-[var(--gray-100)]" />
         </div>
       ))}
     </div>
@@ -201,12 +206,12 @@ function ProjectsSkeleton() {
 
 function EmptyState() {
   return (
-    <div className="rounded-2xl border border-dashed border-[#0000001f] bg-white px-6 py-16 text-center">
-      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[#0000001a] bg-[#fafafa]">
+    <div className="rounded-2xl border border-dashed border-[var(--gray-alpha-400)] bg-[var(--background-100)] px-6 py-16 text-center">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-200)]">
         <span className="text-lg">✦</span>
       </div>
-      <p className="mt-4 text-[15px] font-medium text-[#171717]">No projects yet</p>
-      <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-[#8f8f8f]">
+      <p className="mt-4 text-[15px] font-medium text-[var(--gray-1000)]">No projects yet</p>
+      <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-[var(--gray-700)]">
         Describe an idea in the box above and CodeSetu will take it from request to release.
       </p>
     </div>

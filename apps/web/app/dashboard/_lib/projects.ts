@@ -54,6 +54,39 @@ export function stageLabel(type: StageType): string {
   return STAGES[stageIndex(type)]?.label ?? type;
 }
 
+/* ----------------------------- Models ------------------------------ */
+
+export type ModelProvider = "openai" | "anthropic" | "free";
+export type ModelTier = "premium" | "fast" | "free";
+
+export interface ModelInfo {
+  id: string;
+  label: string;
+  provider: ModelProvider;
+  tier: ModelTier;
+}
+
+export interface ModelsConfig {
+  models: ModelInfo[];
+  defaultModelId: string;
+  /** The pipeline's stages, so per-stage selection stays in sync with what runs. */
+  stages: string[];
+}
+
+/** GET /api/models — selectable models (only configured providers) + pipeline stages. */
+export async function fetchModels(signal?: AbortSignal): Promise<ModelsConfig> {
+  const res = await fetch(`${BACKEND_URL}/api/models`, { credentials: "include", signal });
+  if (!res.ok) throw new Error(`Couldn't load models (${res.status}).`);
+  const json = await res.json();
+  return json.data as ModelsConfig;
+}
+
+export interface StartPipelineInput {
+  prompt: string;
+  defaultModelId?: string;
+  overrides?: Record<string, string>;
+}
+
 /** GET /api/projects — the signed-in user's projects. */
 export async function listProjects(signal?: AbortSignal): Promise<Project[]> {
   const res = await fetch(`${BACKEND_URL}/api/projects`, {
@@ -65,20 +98,43 @@ export async function listProjects(signal?: AbortSignal): Promise<Project[]> {
   return (json?.data?.projects ?? []) as Project[];
 }
 
-/** POST /api/projects — start a new pipeline from a plain-language prompt. */
-export async function createProject(input: { prompt: string; title?: string }): Promise<Project> {
-  const res = await fetch(`${BACKEND_URL}/api/projects`, {
+/**
+ * POST /api/pipeline/run — start a pipeline from a prompt + the chosen per-stage
+ * models. The projects backend (Plan.md) doesn't exist yet, so we return an
+ * optimistic Project so the run shows on the dashboard immediately; it won't
+ * survive a refresh until the projects tables land. Watch the real run in the
+ * Inngest dev dashboard.
+ */
+export async function createProject(input: StartPipelineInput): Promise<Project> {
+  const overrides =
+    input.overrides && Object.keys(input.overrides).length ? input.overrides : undefined;
+
+  const res = await fetch(`${BACKEND_URL}/api/pipeline/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      idea: input.prompt,
+      defaultModelId: input.defaultModelId || undefined,
+      overrides,
+    }),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message || `Couldn't start the project (${res.status}).`);
+    throw new Error(body?.message || `Couldn't start the pipeline (${res.status}).`);
   }
   const json = await res.json();
-  return json.data.project as Project;
+  const pipelineId = (json?.data?.pipelineId as string) || crypto.randomUUID();
+  const now = new Date().toISOString();
+  return {
+    id: pipelineId,
+    title: input.prompt.length > 60 ? `${input.prompt.slice(0, 57)}…` : input.prompt,
+    prompt: input.prompt,
+    status: "running",
+    currentStage: "request",
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 /** Compact relative time, e.g. "just now", "5m ago", "3d ago". */
