@@ -11,6 +11,8 @@ export const auth = betterAuth({
   }),
   secret: config.betterAuthSecret,
   baseURL: config.betterAuthUrl,
+  basePath: "/api/auth",
+  trustedOrigins: [config.clientUrl],
   socialProviders: {
     google: {
       clientId: config.googleClientId,

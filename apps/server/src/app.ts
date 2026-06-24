@@ -8,15 +8,19 @@ import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 
+// CORS must allow credentials so the browser sends/receives the session cookie.
 app.use(
   cors({
     origin: config.clientUrl,
     credentials: true,
   })
 );
-app.use(express.json());
-
+// Better Auth mounts its own Node handler and reads the raw request body,
+// so it MUST come before express.json() — otherwise the body is already
+// consumed and POST routes (sign-in/social, sign-out, …) fail with a 500.
 app.all("/api/auth/*", toNodeHandler(auth));
+
+app.use(express.json());
 
 app.use("/api", apiRouter);
 

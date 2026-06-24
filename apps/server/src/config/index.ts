@@ -16,7 +16,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   databaseUrl: process.env.DATABASE_URL!,
   betterAuthSecret: process.env.BETTER_AUTH_SECRET!,
-  betterAuthUrl: process.env.BETTER_AUTH_URL || `http://localhost:${port}/api/auth`,
+  betterAuthUrl: process.env.BETTER_AUTH_URL || `http://localhost:${port}`,
   googleClientId: process.env.GOOGLE_CLIENT_ID!,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",

@@ -9,12 +9,27 @@
 
 @layer base {
   :root {
-    --background: #FDF9F1;
-    --foreground: #2D2D2D;
-    
+    --background: #ffffff;
+    --foreground: #171717;
+
+    /* Geist (Vercel) — Light theme tokens used by the landing page */
+    --background-100: #ffffff;
+    --background-200: #fafafa;
+    --gray-100: #f2f2f2;
+    --gray-200: #ebebeb;
+    --gray-400: #eaeaea;
+    --gray-700: #8f8f8f;
+    --gray-900: #4d4d4d;
+    --gray-1000: #171717;
+    --gray-alpha-100: #0000000d;
+    --gray-alpha-200: #00000015;
+    --gray-alpha-300: #0000001a;
+    --gray-alpha-400: #00000014;
+    --gray-alpha-500: #00000036;
+    --blue-700: #006bff;
+
+    /* Scribble palette — retained only for the kept idea→production animation */
     --notebook-grid: rgba(0, 0, 0, 0.045);
-    
-    /* Scribble Core Color System */
     --scribble-ink: #2D2D2D;
     --scribble-yellow: #FDE047;
     --scribble-lavender: #E9D5FF;
@@ -23,15 +38,32 @@
     --scribble-green: #D1FAE5;
   }
 
+  html {
+    scroll-behavior: smooth;
+    /* Offset anchor targets so they clear the 64px sticky header */
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-patrick-hand), Arial, Helvetica, sans-serif;
+    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
+  /* Geist two-layer focus ring: a gap in the surface, then a blue-700 ring */
   *:focus-visible {
-    outline: 3px dashed var(--scribble-ink);
-    outline-offset: 3px;
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--blue-700);
+    border-radius: 6px;
   }
 }
 
@@ -273,5 +305,77 @@
   }
   .status-offline {
     background-color: #F87171;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Geist (Vercel) primitives — buttons & cards for the landing page.
+ * Motion uses the system easing and the short 150ms state duration.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .geist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-family: var(--font-geist-sans), sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      border-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  .geist-btn-lg {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 16px;
+  }
+
+  .geist-btn-primary {
+    background: var(--gray-1000);
+    color: var(--background-100);
+    border-color: var(--gray-1000);
+  }
+  .geist-btn-primary:hover {
+    background: #383838;
+    border-color: #383838;
+  }
+
+  .geist-btn-secondary {
+    background: var(--background-100);
+    color: var(--gray-1000);
+    border-color: var(--gray-alpha-400);
+  }
+  .geist-btn-secondary:hover {
+    background: var(--background-200);
+    border-color: var(--gray-alpha-500);
+  }
+
+  .geist-btn-ghost {
+    background: transparent;
+    color: var(--gray-1000);
+  }
+  .geist-btn-ghost:hover {
+    background: var(--gray-alpha-100);
+  }
+
+  .geist-card {
+    background: var(--background-100);
+    border: 1px solid var(--gray-alpha-300);
+    border-radius: 12px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .geist-card:hover {
+    border-color: var(--gray-alpha-500);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
   }
 }
