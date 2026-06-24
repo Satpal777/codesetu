@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@repo/database": "workspace:*",
+    "@repo/inngest": "workspace:*",
     "@repo/schemas": "workspace:*",
     "better-auth": "^1.1.18",
     "cors": "^2.8.5",

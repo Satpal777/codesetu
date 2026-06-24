@@ -19,6 +19,12 @@ export const UpdateProfileInputSchema = z.object({
 
 export type UpdateProfileInput = z.infer<typeof UpdateProfileInputSchema>;
 
+export const StartPipelineInputSchema = z.object({
+  idea: z.string().min(1, "An idea is required").max(2000, "Idea is too long"),
+});
+
+export type StartPipelineInput = z.infer<typeof StartPipelineInputSchema>;
+
 export const ApiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
     status: z.enum(["success", "error"]),
