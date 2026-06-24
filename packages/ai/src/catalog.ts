@@ -24,8 +24,11 @@ export const MODELS: ModelInfo[] = [
   { id: "anthropic|claude-haiku-4-5", label: "Claude Haiku 4.5", provider: "anthropic", tier: "fast" },
   { id: "openai|gpt-4o", label: "GPT-4o", provider: "openai", tier: "premium" },
   { id: "openai|gpt-4o-mini", label: "GPT-4o mini", provider: "openai", tier: "fast" },
-  { id: "free|meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B", provider: "free", tier: "free" },
-  { id: "free|deepseek/deepseek-r1:free", label: "DeepSeek R1", provider: "free", tier: "free" },
+  { id: "free|openai/gpt-oss-120b", label: "GPT-OSS 120B", provider: "free", tier: "free" },
+  { id: "free|openai/gpt-oss-20b", label: "GPT-OSS 20B", provider: "free", tier: "free" },
+  { id: "free|nvidia/nemotron-3-nano-30b-a3b", label: "Nemotron 3 Nano 30B", provider: "free", tier: "free" },
+  { id: "free|nvidia/nemotron-3-super-120b", label: "Nemotron 3 Super", provider: "free", tier: "free" },
+  { id: "free|stepfun/step-3.5-flash", label: "Step 3.5 Flash", provider: "free", tier: "free" },
 ];
 
 export const MODEL_IDS = MODELS.map((m) => m.id);

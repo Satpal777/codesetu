@@ -17,6 +17,9 @@ export async function generateStructured<S extends z.ZodType>(
     schema: opts.schema,
     system: opts.system,
     prompt: opts.prompt,
+    // "json" mode works universally; the default "tool" mode fails on models
+    // that don't support function-calling (e.g. OpenRouter free tier).
+    mode: "json",
   });
   return object as z.infer<S>;
 }
