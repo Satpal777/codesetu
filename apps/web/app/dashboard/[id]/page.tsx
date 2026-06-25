@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { authClient } from "../../_lib/auth-client";
 import ThemeSwitch from "../../_components/theme-switch";
+import AssemblyPanel from "../_components/assembly-panel";
+import PreviewPanel from "../_components/preview-panel";
 import {
   getProject,
-  getClarifications,
   submitClarifications,
   approveProject,
   STAGES,
+  MOMENTS,
   relativeTime,
   type Project,
   type Stage,
@@ -18,6 +20,8 @@ import {
   type Clarification,
   type StageType,
   type StageStatus,
+  type LayoutSpec,
+  type GeneratedFile,
 } from "../_lib/projects";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
@@ -55,15 +59,208 @@ function StageIcon({ status }: { status: StageStatus }) {
   return <span style={{ color: "var(--gray-400)" }}>○</span>;
 }
 
-function ArtifactViewer({ artifact }: { artifact: Artifact }) {
-  const content = artifact.content as Record<string, unknown>;
+function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-3 rounded-xl border border-[var(--gray-alpha-200)] bg-[var(--background-200)] p-4">
-      <pre className="overflow-x-auto whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--gray-900)]">
-        {JSON.stringify(content, null, 2)}
-      </pre>
+    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--gray-600)]">
+      {children}
+    </p>
+  );
+}
+
+function Para({ label, value }: { label: string; value?: unknown }) {
+  if (typeof value !== "string" || value.trim().length === 0) return null;
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--gray-1000)]">{value}</p>
     </div>
   );
+}
+
+function BulletList({ label, items }: { label: string; items?: unknown }) {
+  const strings = Array.isArray(items) ? (items.filter((i) => typeof i === "string") as string[]) : [];
+  if (strings.length === 0) return null;
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <ul className="mt-1.5 space-y-1">
+        {strings.map((s, i) => (
+          <li key={i} className="flex gap-2 text-[13px] leading-relaxed text-[var(--gray-1000)]">
+            <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[var(--gray-500)]" />
+            <span>{s}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function NamedList({ label, items }: { label: string; items?: unknown }) {
+  const rows = Array.isArray(items)
+    ? (items.filter((i) => i && typeof i === "object") as Array<Record<string, unknown>>)
+    : [];
+  if (rows.length === 0) return null;
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="mt-2 space-y-2">
+        {rows.map((r, i) => (
+          <div key={i} className="rounded-lg border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[13px] font-medium text-[var(--gray-1000)]">
+                {String(r.name ?? r.title ?? `Item ${i + 1}`)}
+              </p>
+              {typeof r.priority === "string" && (
+                <span className="shrink-0 rounded-full bg-[var(--background-200)] px-2 py-0.5 text-[11px] text-[var(--gray-700)]">
+                  {r.priority}
+                </span>
+              )}
+            </div>
+            {typeof r.description === "string" && (
+              <p className="mt-1 text-[12px] leading-relaxed text-[var(--gray-700)]">{r.description}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TechnicalDetails({ content }: { content: unknown }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] font-medium text-[var(--gray-600)] hover:text-[var(--gray-1000)]"
+      >
+        {open ? "Hide technical details" : "Show technical details"}
+      </button>
+      {open && (
+        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-3 text-[11px] leading-relaxed text-[var(--gray-900)]">
+          {JSON.stringify(content, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+function StageCanvasPlaceholder() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[var(--gray-alpha-200)] bg-[var(--background-100)]">
+      <div className="relative flex min-h-[340px] flex-col items-center justify-center px-6 py-16 text-center">
+        <div aria-hidden className="hero-glow pointer-events-none absolute inset-0" />
+        <div
+          aria-hidden
+          className="dot-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_50%,black,transparent)]"
+        />
+        <div className="relative">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-200)]">
+            <span className="text-lg">✦</span>
+          </div>
+          <p className="mt-4 text-[14px] font-medium text-[var(--gray-1000)]">Your app takes shape here</p>
+          <p className="mx-auto mt-1 max-w-xs text-[12px] leading-relaxed text-[var(--gray-600)]">
+            Answer the questions and we&apos;ll design it, build it, and show it running — right here.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArtifactViewer({ artifact }: { artifact: Artifact }) {
+  const c = (artifact.content ?? {}) as Record<string, unknown>;
+  const wrap = (children: ReactNode) => (
+    <div className="mt-3 space-y-3 rounded-xl border border-[var(--gray-alpha-200)] bg-[var(--background-200)] p-4">
+      {children}
+    </div>
+  );
+
+  switch (artifact.type) {
+    case "product_thinking":
+      return wrap(
+        <>
+          <Para label="In short" value={c.summary} />
+          <Para label="The core value" value={c.coreValue} />
+          <BulletList label="Who it's for" items={c.targetUsers} />
+          <BulletList label="Things to watch" items={c.risks} />
+        </>
+      );
+    case "prd":
+      return wrap(
+        <>
+          <Para label="Overview" value={c.overview} />
+          <NamedList label="What's included" items={c.features} />
+          <BulletList label="Not doing (on purpose)" items={c.nonGoals} />
+          <BulletList label="How we'll know it works" items={c.successMetrics} />
+        </>
+      );
+    case "design": {
+      const spec = (c.spec ?? {}) as { screen?: string };
+      const svg = typeof c.imageSvg === "string" ? c.imageSvg : null;
+      return wrap(
+        <>
+          {spec.screen && <Para label="Screen" value={spec.screen} />}
+          {svg ? (
+            <div>
+              <FieldLabel>Preview</FieldLabel>
+              <div
+                className="mt-2 overflow-hidden rounded-lg border border-[var(--gray-alpha-200)] bg-white"
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
+              <p className="mt-1.5 text-[11px] text-[var(--gray-600)]">
+                A preview of the layout. The real screens are built next.
+              </p>
+            </div>
+          ) : (
+            <TechnicalDetails content={c} />
+          )}
+        </>
+      );
+    }
+    case "tasks":
+      return wrap(<NamedList label="The build checklist" items={c.tasks} />);
+    case "implementation": {
+      const files = Array.isArray(c.files) ? (c.files as Array<{ path?: unknown }>) : [];
+      if (files.length === 0) return wrap(<Para label="How we'll build it" value={c.outline} />);
+      return wrap(
+        <div>
+          <FieldLabel>Files written</FieldLabel>
+          <ul className="mt-1.5 space-y-1">
+            {files.map((f, i) => (
+              <li key={i} className="font-mono text-[12px] text-[var(--gray-900)]">
+                {typeof f.path === "string" ? f.path : `file ${i + 1}`}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-[var(--gray-600)]">See the live preview below.</p>
+        </div>
+      );
+    }
+    case "review":
+      return wrap(
+        <>
+          <BulletList label="What we found" items={c.findings} />
+          <BulletList label="Suggestions" items={c.suggestions} />
+          <Para label="Risk level" value={c.riskLevel} />
+        </>
+      );
+    case "fixes":
+      return wrap(
+        <>
+          <Para label="In short" value={c.summary} />
+          <BulletList label="What we improved" items={c.appliedFixes} />
+        </>
+      );
+    case "release":
+      return wrap(<Para label="Summary" value={c.summary} />);
+    case "approval":
+      return wrap(
+        <p className="text-[13px] text-[var(--gray-700)]">Approved — thanks. Off we go.</p>
+      );
+    default:
+      return wrap(<TechnicalDetails content={c} />);
+  }
 }
 
 interface ClarificationsFormProps {
@@ -73,13 +270,44 @@ interface ClarificationsFormProps {
 }
 
 function ClarificationsForm({ clarifications, projectId, onSubmitted }: ClarificationsFormProps) {
-  const [answers, setAnswers] = useState<Record<string, string>>(() =>
-    Object.fromEntries(clarifications.map((c) => [c.id, c.answer ?? ""]))
-  );
+  // Chosen option labels per question.
+  const [picks, setPicks] = useState<Record<string, string[]>>({});
+  // Whether the "Something else" free-text box is active per question.
+  const [customOn, setCustomOn] = useState<Record<string, boolean>>({});
+  const [customText, setCustomText] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const allAnswered = clarifications.every((c) => (answers[c.id] ?? "").trim().length > 0);
+  const answerFor = (c: Clarification): string => {
+    const picked = picks[c.id] ?? [];
+    const noOptions = (c.options?.length ?? 0) === 0;
+    const customActive = noOptions || (customOn[c.id] ?? false);
+    const custom = customActive ? (customText[c.id] ?? "").trim() : "";
+    if (c.multiSelect) return [...picked, custom].filter(Boolean).join(", ");
+    return custom || picked[0] || "";
+  };
+
+  const allAnswered = clarifications.every((c) => answerFor(c).length > 0);
+
+  const toggleOption = (c: Clarification, option: string) => {
+    setPicks((prev) => {
+      const current = prev[c.id] ?? [];
+      if (c.multiSelect) {
+        const next = current.includes(option)
+          ? current.filter((o) => o !== option)
+          : [...current, option];
+        return { ...prev, [c.id]: next };
+      }
+      return { ...prev, [c.id]: [option] };
+    });
+    // Picking a concrete option closes the free-text box on single-select.
+    if (!c.multiSelect) setCustomOn((prev) => ({ ...prev, [c.id]: false }));
+  };
+
+  const toggleCustom = (c: Clarification) => {
+    setCustomOn((prev) => ({ ...prev, [c.id]: !prev[c.id] }));
+    if (!c.multiSelect) setPicks((prev) => ({ ...prev, [c.id]: [] }));
+  };
 
   const handleSubmit = async () => {
     if (!allAnswered || submitting) return;
@@ -88,7 +316,7 @@ function ClarificationsForm({ clarifications, projectId, onSubmitted }: Clarific
     try {
       await submitClarifications(
         projectId,
-        clarifications.map((c) => ({ id: c.id, answer: answers[c.id] ?? "" }))
+        clarifications.map((c) => ({ id: c.id, answer: answerFor(c) }))
       );
       onSubmitted();
     } catch (err) {
@@ -102,42 +330,92 @@ function ClarificationsForm({ clarifications, projectId, onSubmitted }: Clarific
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 rounded-2xl border border-[var(--amber-700)] bg-[var(--background-100)] p-5"
+      className="mt-4 rounded-2xl border bg-[var(--background-100)] p-5"
       style={{ borderColor: "var(--amber-700)" }}
     >
       <p className="text-[13px] font-semibold text-[var(--amber-700)]">
-        Help us understand your idea better
+        A couple of quick questions
       </p>
       <p className="mt-1 text-[12px] text-[var(--gray-700)]">
-        Answer these questions so the AI can build exactly what you have in mind.
+        Tap the answers that fit. There&apos;s no wrong choice — it just helps us build what you have in mind.
       </p>
 
-      <div className="mt-4 space-y-4">
-        {clarifications.map((c, i) => (
-          <div key={c.id}>
-            <label className="block text-[13px] font-medium text-[var(--gray-1000)]">
-              {i + 1}. {c.question}
-            </label>
-            <textarea
-              rows={2}
-              value={answers[c.id] ?? ""}
-              onChange={(e) => setAnswers((prev) => ({ ...prev, [c.id]: e.target.value }))}
-              placeholder="Your answer…"
-              className="mt-1.5 w-full resize-none rounded-lg border border-[var(--gray-alpha-300)] bg-[var(--field-background)] px-3 py-2 text-[13px] text-[var(--gray-1000)] placeholder:text-[var(--gray-600)] focus:border-[var(--gray-1000)] focus:outline-none"
-            />
-          </div>
-        ))}
+      <div className="mt-4 space-y-5">
+        {clarifications.map((c, i) => {
+          const picked = picks[c.id] ?? [];
+          const options = c.options ?? [];
+          const noOptions = options.length === 0;
+          const allowCustom = c.allowCustom !== false;
+          const customActive = noOptions || (customOn[c.id] ?? false);
+          return (
+            <div key={c.id}>
+              <p className="text-[13px] font-medium text-[var(--gray-1000)]">
+                {i + 1}. {c.question}
+                {c.multiSelect && (
+                  <span className="ml-2 text-[11px] font-normal text-[var(--gray-600)]">
+                    Pick any that apply
+                  </span>
+                )}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {options.map((opt) => {
+                  const active = picked.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => toggleOption(c, opt)}
+                      aria-pressed={active}
+                      className={`press rounded-full border px-3 py-1.5 text-[13px] ${
+                        active
+                          ? "border-[var(--gray-1000)] bg-[var(--gray-1000)] font-medium text-[var(--background-100)]"
+                          : "border-[var(--gray-alpha-300)] bg-[var(--background-100)] text-[var(--gray-1000)] hover:bg-[var(--background-200)]"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+                {allowCustom && !noOptions && (
+                  <button
+                    type="button"
+                    onClick={() => toggleCustom(c)}
+                    aria-pressed={customActive}
+                    className={`press rounded-full border px-3 py-1.5 text-[13px] ${
+                      customActive
+                        ? "border-[var(--gray-1000)] bg-[var(--gray-1000)] font-medium text-[var(--background-100)]"
+                        : "border-dashed border-[var(--gray-alpha-400)] bg-[var(--background-100)] text-[var(--gray-700)] hover:text-[var(--gray-1000)]"
+                    }`}
+                  >
+                    Something else →
+                  </button>
+                )}
+              </div>
+              {customActive && (
+                <input
+                  autoFocus={!noOptions}
+                  value={customText[c.id] ?? ""}
+                  onChange={(e) =>
+                    setCustomText((prev) => ({ ...prev, [c.id]: e.target.value }))
+                  }
+                  placeholder="Type your answer…"
+                  className="mt-2 w-full rounded-lg border border-[var(--gray-alpha-300)] bg-[var(--field-background)] px-3 py-2 text-[13px] text-[var(--gray-1000)] placeholder:text-[var(--gray-600)] focus:border-[var(--gray-1000)] focus:outline-none"
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {error && <p className="mt-3 text-[12px] text-[var(--red-900)]">{error}</p>}
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-5 flex justify-end">
         <button
           onClick={() => void handleSubmit()}
           disabled={!allAnswered || submitting}
           className="geist-btn geist-btn-primary disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {submitting ? "Sending…" : "Continue pipeline →"}
+          {submitting ? "Sending…" : "Continue →"}
         </button>
       </div>
     </motion.div>
@@ -372,66 +650,118 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     if (projectId) void refreshProject(projectId).catch(() => null);
   };
 
-  // ── Loading / error states ─────────────────────────────────────────────
-  if (loadingUser || loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background-100)]">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--gray-200)] border-t-[var(--gray-1000)]" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background-100)]">
-        <p className="text-[15px] text-[var(--gray-700)]">Please sign in to view this project.</p>
-      </div>
-    );
-  }
-
-  if (error || !project) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--background-100)]">
-        <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn't load project</p>
-        <p className="text-[13px] text-[var(--gray-700)]">{error}</p>
-        <Link href="/dashboard" className="geist-btn geist-btn-secondary">← Back to dashboard</Link>
-      </div>
-    );
-  }
-
   const approvalStage = stages.find((s) => s.type === "approval");
   const showApproveButton = approvalStage?.status === "awaiting_input";
 
   const currentStageIndex = stages.findIndex(
     (s) => s.status === "running" || s.status === "awaiting_input"
   );
+  const currentMeta =
+    currentStageIndex >= 0
+      ? STAGES.find((s) => s.type === stages[currentStageIndex]?.type)
+      : undefined;
 
-  // ── Main render ───────────────────────────────────────────────────────
+  const designSpec = (
+    artifacts.find((a) => a.type === "design")?.content as { spec?: LayoutSpec } | undefined
+  )?.spec;
+
+  const implContent = artifacts.find((a) => a.type === "implementation")?.content as
+    | { entry?: string; files?: GeneratedFile[] }
+    | undefined;
+  const generatedFiles = implContent?.files ?? [];
+  const previewEntry = implContent?.entry ?? "index.html";
+
+  // Only block the full page on the very first session+project load.
+  // Background session refetches must NOT unmount ThemeSwitch.
+  const isInitialSessionLoad = loadingUser && !user;
+  const isProjectLoading = !loadingUser && user && loading;
+  const isNotLoggedIn = !loadingUser && !user;
+  const isError = !loadingUser && user && !loading && (!!error || !project);
+  const showProject = !loadingUser && !!user && !loading && !error && !!project;
+
   return (
-    <div className="min-h-screen bg-[var(--background-200)] text-[var(--gray-1000)]">
-      {/* Header */}
+    <div className={`min-h-screen ${showProject ? "bg-[var(--background-200)]" : "bg-[var(--background-100)]"} text-[var(--gray-1000)]`}>
+
+      {/* ─── Persistent header — ThemeSwitch lives here and never remounts ─── */}
       <header className="sticky top-0 z-40 border-b border-[var(--gray-alpha-400)] bg-[var(--header-background)] backdrop-blur-md">
-        <nav className="mx-auto flex h-16 max-w-4xl items-center gap-3 px-6">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-6">
           <Link href="/dashboard" className="text-[13px] text-[var(--gray-700)] hover:text-[var(--gray-1000)]">
             ← Dashboard
           </Link>
-          <span className="text-[var(--gray-400)]">/</span>
-          <span className="truncate text-[14px] font-semibold text-[var(--gray-1000)]">
-            {project.title}
-          </span>
+          {project && (
+            <>
+              <span className="text-[var(--gray-400)]">/</span>
+              <span className="truncate text-[14px] font-semibold text-[var(--gray-1000)]">
+                {project.title}
+              </span>
+            </>
+          )}
           <div className="ml-auto flex items-center gap-3">
             <ThemeSwitch />
-            <span
-              className="rounded-full border border-[var(--gray-alpha-300)] px-2.5 py-1 text-[12px] font-medium"
-              style={{ color: STATUS_COLOR[project.status as StageStatus] }}
-            >
-              {STATUS_LABEL[project.status as StageStatus] ?? project.status}
-            </span>
+            {project && (
+              <span
+                className="rounded-full border border-[var(--gray-alpha-300)] px-2.5 py-1 text-[12px] font-medium"
+                style={{ color: STATUS_COLOR[project.status as StageStatus] }}
+              >
+                {STATUS_LABEL[project.status as StageStatus] ?? project.status}
+              </span>
+            )}
           </div>
         </nav>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      {/* ─── Loading: session not yet known → full-page spinner ─── */}
+      {isInitialSessionLoad && (
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--gray-200)] border-t-[var(--gray-1000)]" />
+        </div>
+      )}
+
+      {/* ─── Loading: user known but project data not yet arrived → skeleton ─── */}
+      {isProjectLoading && (
+        <main className="mx-auto max-w-4xl px-6 py-10">
+          <div className="h-6 w-48 animate-pulse rounded-lg bg-[var(--gray-100)]" />
+          <div className="mt-2 h-4 w-72 animate-pulse rounded bg-[var(--gray-100)]" />
+          <div className="mt-6 flex gap-1">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="h-1.5 flex-1 animate-pulse rounded-full bg-[var(--gray-100)]" />
+            ))}
+          </div>
+          <div className="mt-8 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 animate-pulse rounded-full bg-[var(--gray-100)]" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-32 animate-pulse rounded bg-[var(--gray-100)]" />
+                    <div className="h-3 w-48 animate-pulse rounded bg-[var(--gray-100)]" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      )}
+
+      {/* ─── Not logged in ─── */}
+      {isNotLoggedIn && (
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <p className="text-[15px] text-[var(--gray-700)]">Please sign in to view this project.</p>
+        </div>
+      )}
+
+      {/* ─── Error / project not found ─── */}
+      {isError && (
+        <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4">
+          <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn't load project</p>
+          <p className="text-[13px] text-[var(--gray-700)]">{error}</p>
+          <Link href="/dashboard" className="geist-btn geist-btn-secondary">← Back to dashboard</Link>
+        </div>
+      )}
+
+      {/* ─── Project detail ─── */}
+      {showProject && project && (
+      <main className="mx-auto max-w-6xl px-6 py-10">
         {/* Project meta */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -463,10 +793,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
         <p className="mt-2 text-[12px] text-[var(--gray-600)]">
           {currentStageIndex >= 0
-            ? `Stage ${currentStageIndex + 1} of 9`
+            ? `Step ${currentStageIndex + 1} of ${STAGES.length}${currentMeta ? ` · ${currentMeta.label}` : ""}`
             : project.status === "completed"
-            ? "Pipeline complete"
-            : "Starting pipeline…"}
+            ? "All done"
+            : "Getting started…"}
         </p>
 
         {/* Approval banner */}
@@ -480,48 +810,77 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               style={{ borderColor: "var(--amber-700)", backgroundColor: "color-mix(in srgb, var(--amber-700) 6%, var(--background-100))" }}
             >
               <p className="text-[15px] font-semibold" style={{ color: "var(--amber-700)" }}>
-                Ready for release?
+                Ready to go live?
               </p>
               <p className="mt-1 text-[13px] text-[var(--gray-700)]">
-                The pipeline has completed all stages. Review the artifacts and approve to release.
+                We&apos;ve finished building. Take a look below, then give it the thumbs-up.
               </p>
               <button
                 onClick={() => void handleApprove()}
                 disabled={approving}
                 className="geist-btn geist-btn-primary mt-4 disabled:opacity-40"
               >
-                {approving ? "Approving…" : "Approve & Release →"}
+                {approving ? "Publishing…" : "Looks good — go live →"}
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Pipeline stages */}
-        <div className="mt-8 space-y-3">
-          {STAGES.map((s) => {
-            const dbStage = stages.find((st) => st.type === s.type) ?? {
-              id: s.type,
-              projectId: project.id,
-              type: s.type,
-              status: "pending" as StageStatus,
-              order: 0,
-            };
-            const artifact = artifacts.find((a) => a.type === s.type);
-            const isActive =
-              dbStage.status === "running" || dbStage.status === "awaiting_input";
-
-            return (
-              <StageCard
-                key={s.type}
-                stage={dbStage as Stage}
-                artifact={artifact}
-                isActive={isActive}
-                clarifications={s.type === "request" ? clarifications : undefined}
+        {/* Studio: the live result (hero, left) beside the pipeline rail (right). */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          {/* The stage — the app as it comes to life. Sticky on desktop. */}
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            {generatedFiles.length > 0 ? (
+              <PreviewPanel
                 projectId={project.id}
-                onClarificationsSubmitted={handleClarificationsSubmitted}
+                files={generatedFiles}
+                entry={previewEntry}
+                initialDeploymentUrl={project.deploymentUrl}
               />
-            );
-          })}
+            ) : designSpec && designSpec.sections?.length > 0 ? (
+              <AssemblyPanel spec={designSpec} stages={stages} projectStatus={project.status} />
+            ) : (
+              <StageCanvasPlaceholder />
+            )}
+          </div>
+
+          {/* The rail — the steps, top to bottom. */}
+          <div className="space-y-8">
+            {MOMENTS.map((moment, mi) => (
+              <section key={moment.id} className="animate-rise" style={{ animationDelay: `${mi * 60}ms` }}>
+                <div className="mb-3 flex items-baseline gap-2">
+                  <h2 className="text-[15px] font-semibold text-[var(--gray-1000)]">{moment.label}</h2>
+                  <span className="text-[12px] text-[var(--gray-600)]">{moment.blurb}</span>
+                </div>
+                <div className="space-y-3">
+                  {STAGES.filter((s) => s.moment === moment.id).map((s) => {
+                    const dbStage = stages.find((st) => st.type === s.type) ?? {
+                      id: s.type,
+                      projectId: project.id,
+                      type: s.type,
+                      status: "pending" as StageStatus,
+                      order: 0,
+                    };
+                    const artifact = artifacts.find((a) => a.type === s.type);
+                    const isActive =
+                      dbStage.status === "running" || dbStage.status === "awaiting_input";
+
+                    return (
+                      <StageCard
+                        key={s.type}
+                        stage={dbStage as Stage}
+                        artifact={artifact}
+                        isActive={isActive}
+                        clarifications={s.type === "request" ? clarifications : undefined}
+                        projectId={project.id}
+                        onClarificationsSubmitted={handleClarificationsSubmitted}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
 
         {project.status === "completed" && (
@@ -532,10 +891,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             className="mt-8 rounded-2xl border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-6 text-center"
           >
             <p className="text-lg font-semibold" style={{ color: "var(--green-800)" }}>
-              🎉 Pipeline complete
+              🎉 Your app is ready
             </p>
             <p className="mt-1 text-[13px] text-[var(--gray-700)]">
-              All 9 stages finished. Check the Release artifact for your summary.
+              Everything&apos;s built. Open the “Going live” step above to see the summary.
             </p>
             <Link href="/dashboard" className="geist-btn geist-btn-secondary mt-4 inline-flex">
               ← Back to dashboard
@@ -543,6 +902,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </motion.div>
         )}
       </main>
+      )}
     </div>
   );
 }

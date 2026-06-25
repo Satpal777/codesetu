@@ -36,6 +36,12 @@
     --amber-700: #ffae00;
     --green-800: #279141;
 
+    /* Strong custom easings (theme-independent). UI motion should feel
+       intentional — the built-in CSS easings are too weak. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
     --header-background: rgba(255, 255, 255, 0.8);
     --button-primary-hover: #383838;
     --card-hover-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
@@ -545,6 +551,71 @@
     .theme-switch__thumb,
     .theme-switch__glyph {
       transition-duration: 0ms;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Polish primitives — reusable press feedback, premium backdrops,
+ * and a staggered entrance. Transform/opacity only (GPU), strong
+ * ease-out, and motion is dropped under prefers-reduced-motion.
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* Press feedback for any pressable that isn't a .geist-btn. */
+  .press {
+    transition: transform 140ms var(--ease-out), background-color 140ms var(--ease-out),
+      border-color 140ms var(--ease-out), color 140ms var(--ease-out);
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+
+  /* Faint dotted grid for depth behind hero areas. */
+  .dot-grid {
+    background-image: radial-gradient(var(--gray-alpha-200) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Soft brand glow, anchored to the top of a section. */
+  .hero-glow {
+    background: radial-gradient(
+      60% 60% at 50% 0%,
+      color-mix(in srgb, var(--blue-700) 9%, transparent),
+      transparent 70%
+    );
+  }
+
+  /* Focus ring used by the idea composer (two-layer: surface gap + soft glow). */
+  .composer-focus:focus-within {
+    border-color: var(--gray-1000);
+    box-shadow: 0 0 0 1px var(--gray-1000),
+      0 0 0 5px color-mix(in srgb, var(--blue-700) 14%, transparent);
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-rise {
+    animation: rise 0.45s var(--ease-out) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .press,
+    .composer-focus {
+      transition-duration: 0ms;
+    }
+    .press:active {
+      transform: none;
+    }
+    .animate-rise {
+      animation: none;
     }
   }
 }

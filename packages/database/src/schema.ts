@@ -52,6 +52,7 @@ export const stageTypeEnum = pgEnum("stage_type", [
   "request",
   "product_thinking",
   "prd",
+  "design",
   "tasks",
   "implementation",
   "review",
@@ -75,6 +76,11 @@ export const project = pgTable("project", {
   prompt: text("prompt").notNull(),
   status: text("status").notNull().default("running"),
   currentStage: stageTypeEnum("current_stage"),
+  // When true ("Autopilot"), the pipeline runs end-to-end without pausing at the
+  // approval gate. When false ("Co-pilot"), it waits for the user's sign-off.
+  autopilot: boolean("autopilot").notNull().default(false),
+  // Live URL after a one-click Publish (Vercel). Null until deployed.
+  deploymentUrl: text("deployment_url"),
   repoUrl: text("repo_url"),
   repoBranch: text("repo_branch"),
   createdAt: timestamp("created_at").notNull(),
@@ -106,6 +112,12 @@ export const clarification = pgTable("clarification", {
   id: text("id").primaryKey(),
   projectId: text("project_id").notNull().references(() => project.id),
   question: text("question").notNull(),
+  // AI-generated answer choices shown as tap-to-answer cards. Null = free-text only.
+  options: jsonb("options").$type<string[]>(),
+  // Whether to offer a "Something else" free-text escape hatch alongside the options.
+  allowCustom: boolean("allow_custom").notNull().default(true),
+  // Whether the user may pick more than one option.
+  multiSelect: boolean("multi_select").notNull().default(false),
   answer: text("answer"),
   order: integer("order").notNull(),
   createdAt: timestamp("created_at").notNull(),

@@ -26,8 +26,8 @@ export const runPipeline = inngest.createFunction(
     },
   },
   async ({ event, step, logger }) => {
-    const { projectId, userId, idea, stageModels } = event.data;
-    logger.info("pipeline.start", { projectId });
+    const { projectId, userId, idea, stageModels, autopilot } = event.data;
+    logger.info("pipeline.start", { projectId, autopilot: autopilot ?? false });
 
     // Fetch stages from DB (created by the API when the project was created).
     const dbStages = await step.run("fetch-stages", async () => {
@@ -61,13 +61,18 @@ export const runPipeline = inngest.createFunction(
       // ── Request stage: generate clarifying questions ─────────────────────
       if (stageName === "request") {
         const ctx: StageContext = { pipelineId: projectId, userId, idea, model, artifacts };
-        const result = await step.run("run:request", () => stageHandlers.request(ctx)) as { questions: string[] };
+        const result = await step.run("run:request", () => stageHandlers.request(ctx)) as {
+          questions: Array<{ question: string; options: string[]; multiSelect: boolean }>;
+        };
 
         await step.run("save-clarifications", async () => {
           const rows = (result.questions ?? []).map((q, i) => ({
             id: randomUUID(),
             projectId,
-            question: q,
+            question: q.question,
+            options: q.options,
+            allowCustom: true,
+            multiSelect: q.multiSelect,
             order: i,
             createdAt: new Date(),
           }));
@@ -126,23 +131,25 @@ export const runPipeline = inngest.createFunction(
         continue;
       }
 
-      // ── Approval stage: wait for user approval ───────────────────────────
+      // ── Approval stage: wait for user approval (skipped in Autopilot) ─────
       if (stageName === "approval") {
-        await step.run("set-approval-waiting", async () => {
-          await db.update(stageTable)
-            .set({ status: "awaiting_input", startedAt: new Date() })
-            .where(eq(stageTable.id, dbStage.id));
-          await db.update(projectTable)
-            .set({ status: "awaiting_input", updatedAt: new Date() })
-            .where(eq(projectTable.id, projectId));
-          emit(projectId, "approval", "awaiting_input");
-        });
+        if (!autopilot) {
+          await step.run("set-approval-waiting", async () => {
+            await db.update(stageTable)
+              .set({ status: "awaiting_input", startedAt: new Date() })
+              .where(eq(stageTable.id, dbStage.id));
+            await db.update(projectTable)
+              .set({ status: "awaiting_input", updatedAt: new Date() })
+              .where(eq(projectTable.id, projectId));
+            emit(projectId, "approval", "awaiting_input");
+          });
 
-        await step.waitForEvent("wait-approval", {
-          event: "pipeline/approval.granted",
-          match: "data.projectId",
-          timeout: "30d",
-        });
+          await step.waitForEvent("wait-approval", {
+            event: "pipeline/approval.granted",
+            match: "data.projectId",
+            timeout: "30d",
+          });
+        }
 
         await step.run("complete:approval", async () => {
           const approvalArtifact = { approvedAt: new Date().toISOString() };
@@ -190,12 +197,12 @@ export const runPipeline = inngest.createFunction(
           .set({ status: "completed", completedAt: new Date() })
           .where(eq(stageTable.id, dbStage.id));
 
-        await step.sendEvent(`stage-completed:${stageName}`,
-          events.pipelineStageCompleted.create({ projectId, stage: stageName as ProcessingStage })
-        );
-
         emit(projectId, stageName, "completed", result);
       });
+
+      await step.sendEvent(`stage-completed:${stageName}`,
+        events.pipelineStageCompleted.create({ projectId, stage: stageName as ProcessingStage })
+      );
     }
 
     // ── Mark project completed ───────────────────────────────────────────

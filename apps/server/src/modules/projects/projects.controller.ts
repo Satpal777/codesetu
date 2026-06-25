@@ -17,6 +17,45 @@ import { inngest, events, PROCESSING_STAGES, pipelineEmitter, type PipelineUpdat
 import { StageModelsInputSchema, resolveStageModels } from "@repo/ai";
 import { AuthenticatedRequest } from "../../middleware/auth.middleware.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { config } from "../../config/index.js";
+
+interface GeneratedFile {
+  path: string;
+  content: string;
+}
+
+function slugify(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "shipflow-app"
+  );
+}
+
+/** Deploy a static file tree to Vercel and return the live URL. */
+async function deployToVercel(name: string, files: GeneratedFile[]): Promise<string> {
+  const res = await fetch("https://api.vercel.com/v13/deployments?forceNew=1", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.vercelToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: slugify(name),
+      files: files.map((f) => ({ file: f.path.replace(/^\/+/, ""), data: f.content })),
+      projectSettings: { framework: null },
+      target: "production",
+    }),
+  });
+
+  const body = (await res.json().catch(() => null)) as { url?: string; error?: { message?: string } } | null;
+  if (!res.ok || !body?.url) {
+    throw new AppError(body?.error?.message || `Vercel deploy failed (${res.status}).`, 502);
+  }
+  return `https://${body.url}`;
+}
 
 const STAGE_ORDER = PROCESSING_STAGES as readonly string[];
 
@@ -37,6 +76,8 @@ export const ProjectsController = {
         input.title ||
         (input.prompt.length > 60 ? `${input.prompt.slice(0, 57)}…` : input.prompt);
 
+      const autopilot = input.autopilot ?? false;
+
       await db.insert(projectTable).values({
         id: projectId,
         userId: req.user.id,
@@ -44,6 +85,7 @@ export const ProjectsController = {
         prompt: input.prompt,
         status: "running",
         currentStage: "request",
+        autopilot,
         repoUrl: input.repoUrl ?? null,
         repoBranch: input.repoBranch ?? null,
         createdAt: now,
@@ -68,6 +110,7 @@ export const ProjectsController = {
           userId: req.user.id,
           idea: input.prompt,
           stageModels,
+          autopilot,
         })
       );
 
@@ -81,6 +124,7 @@ export const ProjectsController = {
             prompt: input.prompt,
             status: "running",
             currentStage: "request",
+            autopilot,
             repoUrl: input.repoUrl ?? null,
             repoBranch: input.repoBranch ?? null,
             createdAt: now.toISOString(),
@@ -200,6 +244,41 @@ export const ProjectsController = {
       await inngest.send(events.approvalGranted.create({ projectId: id }));
 
       res.status(200).json({ status: "success", message: "Project approved" });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** POST /api/projects/:id/deploy — publish the generated app to Vercel. */
+  async deploy(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) throw new AppError("Not authenticated", 401);
+      const { id } = req.params as { id: string };
+
+      if (!config.vercelToken) {
+        throw new AppError("Publishing isn't configured. Set VERCEL_TOKEN to enable one-click deploy.", 503);
+      }
+
+      const projRows = await db.select().from(projectTable)
+        .where(and(eq(projectTable.id, id), eq(projectTable.userId, req.user.id)));
+      const proj = projRows[0];
+      if (!proj) throw new AppError("Project not found", 404);
+
+      const implRows = await db.select().from(artifactTable)
+        .where(and(eq(artifactTable.projectId, id), eq(artifactTable.type, "implementation")));
+      const content = implRows[0]?.content as { files?: GeneratedFile[] } | undefined;
+      const files = content?.files ?? [];
+      if (files.length === 0) {
+        throw new AppError("There's nothing to publish yet — the app hasn't been built.", 400);
+      }
+
+      const url = await deployToVercel(proj.title, files);
+
+      await db.update(projectTable)
+        .set({ deploymentUrl: url, updatedAt: new Date() })
+        .where(eq(projectTable.id, id));
+
+      res.status(200).json({ status: "success", message: "Published", data: { url } });
     } catch (err) {
       next(err);
     }

@@ -5,6 +5,7 @@ export type StageType =
   | "request"
   | "product_thinking"
   | "prd"
+  | "design"
   | "tasks"
   | "implementation"
   | "review"
@@ -36,10 +37,72 @@ export interface Artifact {
   createdAt: string;
 }
 
+/** A section of the AI-designed screen. Mirrors the backend LayoutSpec. */
+export type LayoutSectionType =
+  | "navbar"
+  | "hero"
+  | "form"
+  | "features"
+  | "gallery"
+  | "list"
+  | "cta"
+  | "content"
+  | "footer";
+
+export interface LayoutSection {
+  type: LayoutSectionType;
+  title?: string | null;
+  subtitle?: string | null;
+  items?: string[] | null;
+  cta?: string | null;
+}
+
+export interface LayoutSpec {
+  screen: string;
+  sections: LayoutSection[];
+}
+
+/** A file in the generated app (output of the implementation stage). */
+export interface GeneratedFile {
+  path: string;
+  content: string;
+}
+
+function findFile(files: GeneratedFile[], name: string): GeneratedFile | undefined {
+  const clean = name.replace(/^\.?\/+/, "");
+  return files.find((f) => f.path.replace(/^\.?\/+/, "") === clean);
+}
+
+/**
+ * Assemble the generated files into a single HTML document for the preview iframe,
+ * inlining locally-referenced CSS and JS so relative paths resolve with no server.
+ */
+export function buildPreviewHtml(files: GeneratedFile[], entry = "index.html"): string {
+  const entryFile = findFile(files, entry) ?? files.find((f) => f.path.endsWith(".html"));
+  if (!entryFile) return "<!doctype html><title>Preview</title><p>No preview available.</p>";
+
+  let html = entryFile.content;
+  html = html.replace(/<link[^>]*href=["']([^"']+\.css)["'][^>]*>/gi, (m, href: string) => {
+    const css = findFile(files, href);
+    return css ? `<style>\n${css.content}\n</style>` : m;
+  });
+  html = html.replace(/<script[^>]*src=["']([^"']+\.js)["'][^>]*>\s*<\/script>/gi, (m, src: string) => {
+    const js = findFile(files, src);
+    return js ? `<script>\n${js.content}\n</script>` : m;
+  });
+  return html;
+}
+
 export interface Clarification {
   id: string;
   projectId: string;
   question: string;
+  /** AI-generated tap-to-answer choices. Null/empty = free-text only. */
+  options?: string[] | null;
+  /** Whether a "Something else" free-text escape hatch is offered. */
+  allowCustom?: boolean;
+  /** Whether the user may pick more than one option. */
+  multiSelect?: boolean;
   answer?: string | null;
   order: number;
   createdAt: string;
@@ -51,6 +114,8 @@ export interface Project {
   prompt: string;
   status: ProjectStatus;
   currentStage: StageType;
+  autopilot?: boolean;
+  deploymentUrl?: string | null;
   repoUrl?: string | null;
   repoBranch?: string | null;
   createdAt: string;
@@ -60,17 +125,42 @@ export interface Project {
   clarifications?: Clarification[];
 }
 
-export const STAGES: { type: StageType; label: string; description: string }[] = [
-  { type: "request", label: "Request", description: "Clarifying questions" },
-  { type: "product_thinking", label: "Product Thinking", description: "Market & user analysis" },
-  { type: "prd", label: "PRD", description: "Product requirements" },
-  { type: "tasks", label: "Tasks", description: "Work breakdown" },
-  { type: "implementation", label: "Implementation", description: "Code plan" },
-  { type: "review", label: "Review", description: "Code review" },
-  { type: "fixes", label: "Fixes", description: "Applied improvements" },
-  { type: "approval", label: "Approval", description: "Final sign-off" },
-  { type: "release", label: "Release", description: "Ship it" },
+/** The four human-facing "moments" a non-technical user actually experiences. */
+export type MomentId = "idea" | "plan" | "build" | "launch";
+
+/**
+ * Friendly, jargon-free labels for each engine stage, grouped under the moment
+ * the user sees. The backend stage `type`s never change — this is the face.
+ */
+export const STAGES: {
+  type: StageType;
+  label: string;
+  description: string;
+  moment: MomentId;
+}[] = [
+  { type: "request", label: "Understanding your idea", description: "A few quick questions", moment: "idea" },
+  { type: "product_thinking", label: "Who it's for", description: "Who'll use it and why", moment: "plan" },
+  { type: "prd", label: "What we'll build", description: "The plan, in plain words", moment: "plan" },
+  { type: "design", label: "How it'll look", description: "A preview of the design", moment: "plan" },
+  { type: "tasks", label: "The build checklist", description: "Breaking it into steps", moment: "build" },
+  { type: "implementation", label: "Building your app", description: "Putting it together", moment: "build" },
+  { type: "review", label: "Quality check", description: "Looking for rough edges", moment: "build" },
+  { type: "fixes", label: "Polishing", description: "Smoothing things out", moment: "build" },
+  { type: "approval", label: "Your sign-off", description: "Your turn to approve", moment: "launch" },
+  { type: "release", label: "Going live", description: "Ready to share", moment: "launch" },
 ];
+
+/** The four moments, in order, with their member stages. */
+export const MOMENTS: { id: MomentId; label: string; blurb: string }[] = [
+  { id: "idea", label: "Your idea", blurb: "Tell us what you want to make" },
+  { id: "plan", label: "The plan", blurb: "What we'll build and who it's for" },
+  { id: "build", label: "Building", blurb: "We put your app together" },
+  { id: "launch", label: "Launch", blurb: "Review it and go live" },
+];
+
+export function stagesInMoment(moment: MomentId): StageType[] {
+  return STAGES.filter((s) => s.moment === moment).map((s) => s.type);
+}
 
 export const STAGE_COUNT = STAGES.length;
 
@@ -112,6 +202,7 @@ export async function fetchModels(signal?: AbortSignal): Promise<ModelsConfig> {
 
 export interface StartPipelineInput {
   prompt: string;
+  autopilot?: boolean;
   defaultModelId?: string;
   overrides?: Record<string, string>;
 }
@@ -132,6 +223,7 @@ export async function createProject(input: StartPipelineInput): Promise<Project>
     credentials: "include",
     body: JSON.stringify({
       prompt: input.prompt,
+      autopilot: input.autopilot ?? undefined,
       defaultModelId: input.defaultModelId || undefined,
       overrides: input.overrides && Object.keys(input.overrides).length ? input.overrides : undefined,
     }),
@@ -175,6 +267,22 @@ export async function submitClarifications(
     const body = await res.json().catch(() => null) as { message?: string } | null;
     throw new Error(body?.message || `Couldn't submit answers (${res.status}).`);
   }
+}
+
+/** POST /api/projects/:id/deploy — publish the generated app, returns the live URL. */
+export async function deployProject(id: string): Promise<string> {
+  const res = await fetch(`${BACKEND_URL}/api/projects/${id}/deploy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  const json = (await res.json().catch(() => null)) as
+    | { message?: string; data?: { url?: string } }
+    | null;
+  if (!res.ok || !json?.data?.url) {
+    throw new Error(json?.message || `Couldn't publish (${res.status}).`);
+  }
+  return json.data.url;
 }
 
 /** POST /api/projects/:id/approve */

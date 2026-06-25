@@ -11,5 +11,6 @@ router.get("/:id/stream", authGuard, ProjectsController.stream);
 router.get("/:id/clarifications", authGuard, ProjectsController.getClarifications);
 router.post("/:id/clarifications", authGuard, ProjectsController.submitClarifications);
 router.post("/:id/approve", authGuard, ProjectsController.approve);
+router.post("/:id/deploy", authGuard, ProjectsController.deploy);
 
 export const projectsRouter = router;

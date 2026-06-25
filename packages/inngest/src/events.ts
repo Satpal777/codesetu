@@ -6,6 +6,7 @@ export const STAGE_IDS = [
   "request",
   "product_thinking",
   "prd",
+  "design",
   "tasks",
   "implementation",
   "review",
@@ -30,6 +31,8 @@ const pipelineRunRequestedSchema = z.object({
   userId: z.string(),
   idea: z.string().min(1),
   stageModels: z.record(z.string(), z.string()),
+  // Autopilot skips the approval gate; defaults to Co-pilot (waits for sign-off).
+  autopilot: z.boolean().optional(),
 });
 
 const pipelineStageCompletedSchema = z.object({

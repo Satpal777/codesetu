@@ -62,11 +62,12 @@ function StageProgress({ status, currentStage }: Pick<Project, "status" | "curre
   );
 }
 
-export default function ProjectCard({ project }: { project: Project }) {
+export default function ProjectCard({ project, index = 0 }: { project: Project; index?: number }) {
   return (
     <Link
       href={`/dashboard/${project.id}`}
-      className="geist-card group flex flex-col p-5 focus-visible:outline-none"
+      style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+      className="geist-card press animate-rise group flex flex-col p-5 focus-visible:outline-none"
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--gray-1000)]">

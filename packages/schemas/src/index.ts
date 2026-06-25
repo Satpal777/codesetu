@@ -37,6 +37,8 @@ export const ApiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
 export const CreateProjectInputSchema = z.object({
   prompt: z.string().min(10, "Prompt must be at least 10 characters"),
   title: z.string().optional(),
+  // Autopilot: run the whole build without stopping for approval. Defaults to Co-pilot.
+  autopilot: z.boolean().optional(),
   repoUrl: z.string().url().optional(),
   repoBranch: z.string().optional(),
   defaultModelId: z.string().optional(),
@@ -76,6 +78,9 @@ export const ClarificationSchema = z.object({
   id: z.string(),
   projectId: z.string(),
   question: z.string(),
+  options: z.array(z.string()).nullable().optional(),
+  allowCustom: z.boolean().optional(),
+  multiSelect: z.boolean().optional(),
   answer: z.string().nullable().optional(),
   order: z.number(),
   createdAt: z.date().or(z.string()),
@@ -89,6 +94,8 @@ export const ProjectResponseSchema = z.object({
   prompt: z.string(),
   status: z.string(),
   currentStage: z.string().nullable().optional(),
+  autopilot: z.boolean().optional(),
+  deploymentUrl: z.string().nullable().optional(),
   repoUrl: z.string().nullable().optional(),
   repoBranch: z.string().nullable().optional(),
   createdAt: z.date().or(z.string()),
