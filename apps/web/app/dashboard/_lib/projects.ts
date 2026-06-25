@@ -1,12 +1,6 @@
-/* ------------------------------------------------------------------ *
- * Dashboard data layer — types + thin fetch helpers for the projects
- * API described in Plan.md. Kept separate from the UI so components stay
- * presentational and the backend contract lives in one place.
- * ------------------------------------------------------------------ */
-
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
 
-/** The nine pipeline stages, in order (Plan.md `pgEnum stageType`). */
+/** The nine pipeline stages, in order. */
 export type StageType =
   | "request"
   | "product_thinking"
@@ -18,7 +12,38 @@ export type StageType =
   | "approval"
   | "release";
 
+export type StageStatus = "pending" | "running" | "awaiting_input" | "completed" | "failed";
 export type ProjectStatus = "running" | "awaiting_input" | "completed" | "failed";
+
+export interface Stage {
+  id: string;
+  projectId: string;
+  type: StageType;
+  status: StageStatus;
+  order: number;
+  error?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+}
+
+export interface Artifact {
+  id: string;
+  projectId: string;
+  stageId: string;
+  type: StageType;
+  content: unknown;
+  version: number;
+  createdAt: string;
+}
+
+export interface Clarification {
+  id: string;
+  projectId: string;
+  question: string;
+  answer?: string | null;
+  order: number;
+  createdAt: string;
+}
 
 export interface Project {
   id: string;
@@ -27,20 +52,24 @@ export interface Project {
   status: ProjectStatus;
   currentStage: StageType;
   repoUrl?: string | null;
+  repoBranch?: string | null;
   createdAt: string;
   updatedAt: string;
+  stages?: Stage[];
+  artifacts?: Artifact[];
+  clarifications?: Clarification[];
 }
 
-export const STAGES: { type: StageType; label: string }[] = [
-  { type: "request", label: "Request" },
-  { type: "product_thinking", label: "Product Thinking" },
-  { type: "prd", label: "PRD" },
-  { type: "tasks", label: "Tasks" },
-  { type: "implementation", label: "Implementation" },
-  { type: "review", label: "Review" },
-  { type: "fixes", label: "Fixes" },
-  { type: "approval", label: "Approval" },
-  { type: "release", label: "Release" },
+export const STAGES: { type: StageType; label: string; description: string }[] = [
+  { type: "request", label: "Request", description: "Clarifying questions" },
+  { type: "product_thinking", label: "Product Thinking", description: "Market & user analysis" },
+  { type: "prd", label: "PRD", description: "Product requirements" },
+  { type: "tasks", label: "Tasks", description: "Work breakdown" },
+  { type: "implementation", label: "Implementation", description: "Code plan" },
+  { type: "review", label: "Review", description: "Code review" },
+  { type: "fixes", label: "Fixes", description: "Applied improvements" },
+  { type: "approval", label: "Approval", description: "Final sign-off" },
+  { type: "release", label: "Release", description: "Ship it" },
 ];
 
 export const STAGE_COUNT = STAGES.length;
@@ -69,17 +98,17 @@ export interface ModelInfo {
 export interface ModelsConfig {
   models: ModelInfo[];
   defaultModelId: string;
-  /** The pipeline's stages, so per-stage selection stays in sync with what runs. */
   stages: string[];
 }
 
-/** GET /api/models — selectable models (only configured providers) + pipeline stages. */
 export async function fetchModels(signal?: AbortSignal): Promise<ModelsConfig> {
   const res = await fetch(`${BACKEND_URL}/api/models`, { credentials: "include", signal });
   if (!res.ok) throw new Error(`Couldn't load models (${res.status}).`);
-  const json = await res.json();
-  return json.data as ModelsConfig;
+  const json = await res.json() as { data: ModelsConfig };
+  return json.data;
 }
+
+/* ----------------------------- Projects API ------------------------ */
 
 export interface StartPipelineInput {
   prompt: string;
@@ -87,54 +116,78 @@ export interface StartPipelineInput {
   overrides?: Record<string, string>;
 }
 
-/** GET /api/projects — the signed-in user's projects. */
+/** GET /api/projects */
 export async function listProjects(signal?: AbortSignal): Promise<Project[]> {
-  const res = await fetch(`${BACKEND_URL}/api/projects`, {
-    credentials: "include",
-    signal,
-  });
+  const res = await fetch(`${BACKEND_URL}/api/projects`, { credentials: "include", signal });
   if (!res.ok) throw new Error(`Couldn't load your projects (${res.status}).`);
-  const json = await res.json();
-  return (json?.data?.projects ?? []) as Project[];
+  const json = await res.json() as { data: { projects: Project[] } };
+  return json.data?.projects ?? [];
 }
 
-/**
- * POST /api/pipeline/run — start a pipeline from a prompt + the chosen per-stage
- * models. The projects backend (Plan.md) doesn't exist yet, so we return an
- * optimistic Project so the run shows on the dashboard immediately; it won't
- * survive a refresh until the projects tables land. Watch the real run in the
- * Inngest dev dashboard.
- */
+/** POST /api/projects */
 export async function createProject(input: StartPipelineInput): Promise<Project> {
-  const overrides =
-    input.overrides && Object.keys(input.overrides).length ? input.overrides : undefined;
-
-  const res = await fetch(`${BACKEND_URL}/api/pipeline/run`, {
+  const res = await fetch(`${BACKEND_URL}/api/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
-      idea: input.prompt,
+      prompt: input.prompt,
       defaultModelId: input.defaultModelId || undefined,
-      overrides,
+      overrides: input.overrides && Object.keys(input.overrides).length ? input.overrides : undefined,
     }),
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    const body = await res.json().catch(() => null) as { message?: string } | null;
     throw new Error(body?.message || `Couldn't start the pipeline (${res.status}).`);
   }
-  const json = await res.json();
-  const pipelineId = (json?.data?.pipelineId as string) || crypto.randomUUID();
-  const now = new Date().toISOString();
-  return {
-    id: pipelineId,
-    title: input.prompt.length > 60 ? `${input.prompt.slice(0, 57)}…` : input.prompt,
-    prompt: input.prompt,
-    status: "running",
-    currentStage: "request",
-    createdAt: now,
-    updatedAt: now,
-  };
+  const json = await res.json() as { data: { project: Project } };
+  return json.data.project;
+}
+
+/** GET /api/projects/:id */
+export async function getProject(id: string, signal?: AbortSignal): Promise<Project> {
+  const res = await fetch(`${BACKEND_URL}/api/projects/${id}`, { credentials: "include", signal });
+  if (!res.ok) throw new Error(`Couldn't load project (${res.status}).`);
+  const json = await res.json() as { data: { project: Project } };
+  return json.data.project;
+}
+
+/** GET /api/projects/:id/clarifications */
+export async function getClarifications(id: string, signal?: AbortSignal): Promise<Clarification[]> {
+  const res = await fetch(`${BACKEND_URL}/api/projects/${id}/clarifications`, { credentials: "include", signal });
+  if (!res.ok) throw new Error(`Couldn't load clarifications (${res.status}).`);
+  const json = await res.json() as { data: { clarifications: Clarification[] } };
+  return json.data?.clarifications ?? [];
+}
+
+/** POST /api/projects/:id/clarifications */
+export async function submitClarifications(
+  id: string,
+  answers: Array<{ id: string; answer: string }>
+): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/api/projects/${id}/clarifications`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ answers }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message || `Couldn't submit answers (${res.status}).`);
+  }
+}
+
+/** POST /api/projects/:id/approve */
+export async function approveProject(id: string): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/api/projects/${id}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message || `Couldn't approve project (${res.status}).`);
+  }
 }
 
 /** Compact relative time, e.g. "just now", "5m ago", "3d ago". */

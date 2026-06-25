@@ -2,17 +2,6 @@ import { z } from "zod";
 import { generateStructured, generateProse } from "@repo/ai";
 import type { ProcessingStage } from "../events.js";
 
-/* ------------------------------------------------------------------ *
- * Per-stage handlers for the Codesetu pipeline.
- *
- * Each handler is the real unit of work for one stage, kept separate from
- * the orchestrator (pipeline.ts) so a stage can be edited and reasoned
- * about in isolation. Every handler receives `model` — the "provider|model"
- * chosen for THIS stage in the UI — and runs against it via @repo/ai, so
- * switching provider is just a different string. Each returns `model` in
- * its output so the chosen provider is visible in the Inngest run.
- * ------------------------------------------------------------------ */
-
 /** What every stage handler receives. `artifacts` holds prior stages' output. */
 export interface StageContext {
   pipelineId: string;
@@ -20,15 +9,10 @@ export interface StageContext {
   idea: string;
   /** "provider|model" id resolved for this stage. */
   model: string;
-  artifacts: Record<ProcessingStage, unknown>;
+  artifacts: Record<string, unknown>;
 }
 
 export type StageHandler = (ctx: StageContext) => Promise<unknown>;
-
-/* ------------------------------------------------------------------ *
- * Error boundary — wraps every AI-calling handler so failures surface
- * the stage name, model id, and root cause in Inngest's retry logs.
- * ------------------------------------------------------------------ */
 
 export class StageError extends Error {
   constructor(
@@ -43,64 +27,139 @@ export class StageError extends Error {
   }
 }
 
-function withErrorBoundary(stage: ProcessingStage, handler: StageHandler): StageHandler {
+function withBoundary(stage: ProcessingStage, handler: StageHandler): StageHandler {
   return async (ctx) => {
     try {
       return await handler(ctx);
     } catch (err) {
-      // Log enough context to debug multi-provider issues from a run log.
       console.error(`[pipeline] stage="${stage}" model="${ctx.model}" pipeline="${ctx.pipelineId}"`, err);
       throw new StageError(stage, ctx.model, err);
     }
   };
 }
 
+const QuestionsSchema = z.object({
+  questions: z.array(z.string()).min(2).max(8),
+});
+
+const ProductThinkingSchema = z.object({
+  summary: z.string(),
+  targetUsers: z.array(z.string()),
+  coreValue: z.string(),
+  risks: z.array(z.string()),
+});
+
 const PrdSchema = z.object({
   title: z.string(),
+  overview: z.string(),
+  features: z.array(z.object({ name: z.string(), description: z.string() })),
+  nonGoals: z.array(z.string()),
+  successMetrics: z.array(z.string()),
+});
+
+const TasksSchema = z.object({
+  tasks: z.array(
+    z.object({ title: z.string(), description: z.string(), priority: z.enum(["high", "medium", "low"]) })
+  ),
+});
+
+const ReviewSchema = z.object({
+  findings: z.array(z.string()),
+  suggestions: z.array(z.string()),
+  riskLevel: z.enum(["low", "medium", "high"]),
+});
+
+const FixesSchema = z.object({
+  appliedFixes: z.array(z.string()),
   summary: z.string(),
-  requirements: z.array(z.string()),
 });
 
 export const stageHandlers: Record<ProcessingStage, StageHandler> = {
-  // Idea → PRD.
-  document: withErrorBoundary("document", async ({ idea, model }) => {
-    const prd = await generateStructured(model, {
+  // Generate clarifying questions from the raw idea.
+  request: withBoundary("request", async ({ idea, model }) => {
+    const result = await generateStructured(model, {
+      schema: QuestionsSchema,
+      system:
+        "You are a senior product consultant. Given a product idea, generate 3–6 targeted clarifying questions that will help you deeply understand scope, users, and constraints before writing any specs. Return JSON.",
+      prompt: `Product idea: ${idea}`,
+    });
+    return { model, questions: result.questions };
+  }),
+
+  // Market and user analysis informed by clarification answers.
+  product_thinking: withBoundary("product_thinking", async ({ idea, model, artifacts }) => {
+    const clarifications = artifacts["clarifications"] ?? [];
+    const result = await generateStructured(model, {
+      schema: ProductThinkingSchema,
+      system:
+        "You are a product strategist. Analyse the idea and clarifications to produce a clear product thinking document.",
+      prompt: `Idea: ${idea}\n\nClarifications: ${JSON.stringify(clarifications)}`,
+    });
+    return { model, ...result };
+  }),
+
+  // Full PRD from product thinking.
+  prd: withBoundary("prd", async ({ idea, model, artifacts }) => {
+    const result = await generateStructured(model, {
       schema: PrdSchema,
-      system: "You are a product manager. Turn the idea into a concise PRD.",
-      prompt: `Idea: ${idea}`,
+      system: "You are a product manager. Write a concise PRD from the product thinking document.",
+      prompt: `Idea: ${idea}\n\nProduct thinking: ${JSON.stringify(artifacts["product_thinking"])}`,
     });
-    return { model, prd };
+    return { model, ...result };
   }),
 
-  // PRD → ordered task list.
-  tasks: withErrorBoundary("tasks", async ({ model, artifacts }) => {
-    const { tasks } = await generateStructured(model, {
-      schema: z.object({ tasks: z.array(z.string()) }),
-      system: "Break the PRD into a short, ordered list of concrete build tasks.",
-      prompt: `PRD: ${JSON.stringify(artifacts.document)}`,
+  // Task list from PRD.
+  tasks: withBoundary("tasks", async ({ model, artifacts }) => {
+    const result = await generateStructured(model, {
+      schema: TasksSchema,
+      system: "Break this PRD into a short, ordered list of concrete build tasks. Max 10 tasks.",
+      prompt: `PRD: ${JSON.stringify(artifacts["prd"])}`,
     });
-    return { model, tasks };
+    return { model, tasks: result.tasks };
   }),
 
-  // Tasks → implementation outline. (Real codegen is a later milestone.)
-  code: withErrorBoundary("code", async ({ model, artifacts }) => {
+  // Implementation outline (shallow — real code push is a future milestone).
+  implementation: withBoundary("implementation", async ({ model, artifacts }) => {
     const outline = await generateProse(model, {
-      system: "You are a senior engineer. Give a brief implementation outline — no full code.",
-      prompt: `Tasks: ${JSON.stringify(artifacts.tasks)}`,
+      system:
+        "You are a senior engineer. Give a focused implementation plan: architecture choices, file structure, key algorithms. Be concrete and actionable. No full code.",
+      prompt: `Tasks: ${JSON.stringify(artifacts["tasks"])}\n\nPRD: ${JSON.stringify(artifacts["prd"])}`,
     });
     return { model, outline };
   }),
 
-  // Code → review notes.
-  review: withErrorBoundary("review", async ({ model, artifacts }) => {
-    const notes = await generateProse(model, {
-      system: "Review the plan in 3–5 bullet points and call out the main risks.",
-      prompt: `Implementation outline: ${JSON.stringify(artifacts.code)}`,
+  // Code review of the implementation plan.
+  review: withBoundary("review", async ({ model, artifacts }) => {
+    const result = await generateStructured(model, {
+      schema: ReviewSchema,
+      system: "Review the implementation plan. Identify gaps, risks, and improvement suggestions.",
+      prompt: `Implementation plan: ${JSON.stringify(artifacts["implementation"])}`,
     });
-    return { model, notes };
+    return { model, ...result };
   }),
 
-  // Review → deploy. Not an AI step — it ships. Placeholder for now.
-  deploy: async ({ model }) => ({ model, url: "https://preview.codesetu.app/placeholder" }),
-};
+  // Apply suggested fixes from the review.
+  fixes: withBoundary("fixes", async ({ model, artifacts }) => {
+    const result = await generateStructured(model, {
+      schema: FixesSchema,
+      system: "Apply the review suggestions to produce an improved implementation plan summary.",
+      prompt: `Implementation: ${JSON.stringify(artifacts["implementation"])}\n\nReview: ${JSON.stringify(artifacts["review"])}`,
+    });
+    return { model, ...result };
+  }),
 
+  // Approval is a human-in-the-loop gate handled in the orchestrator; no AI call.
+  approval: async ({ model }) => ({
+    model,
+    note: "Awaiting user approval before release.",
+  }),
+
+  // Release summary.
+  release: withBoundary("release", async ({ model, artifacts }) => {
+    const summary = await generateProse(model, {
+      system: "Write a concise release summary for the product based on what was built.",
+      prompt: `PRD: ${JSON.stringify(artifacts["prd"])}\n\nFixes: ${JSON.stringify(artifacts["fixes"])}`,
+    });
+    return { model, summary, deploymentUrl: null };
+  }),
+};

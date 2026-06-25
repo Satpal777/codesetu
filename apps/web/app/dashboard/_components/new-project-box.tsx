@@ -1,20 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createProject, type Project } from "../_lib/projects";
 import ModelPicker, { type ModelSelection } from "./model-picker";
 
-/**
- * The primary action of the dashboard: describe a product in plain words and
- * start a pipeline. Deliberately calm — one field, one button, room to think.
- */
 export default function NewProjectBox({ onCreated }: { onCreated: (project: Project) => void }) {
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [models, setModels] = useState<ModelSelection>({ defaultModelId: "", overrides: {} });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = prompt.trim().length > 0 && !submitting;
+  const canSubmit = prompt.trim().length >= 10 && !submitting;
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -28,14 +26,14 @@ export default function NewProjectBox({ onCreated }: { onCreated: (project: Proj
       });
       setPrompt("");
       onCreated(project);
+      // Navigate to the live pipeline view immediately.
+      router.push(`/dashboard/${project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
       setSubmitting(false);
     }
   };
 
-  // ⌘/Ctrl + Enter to start, the way you'd expect from a prompt box.
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
@@ -49,7 +47,7 @@ export default function NewProjectBox({ onCreated }: { onCreated: (project: Proj
         Start a new project
       </label>
       <p className="mt-1 text-[13px] text-[var(--gray-700)]">
-        Describe what you want to ship. CodeSetu plans, builds, reviews, and releases it.
+        Describe what you want to ship. ShipFlow plans, builds, reviews, and releases it.
       </p>
 
       <textarea
@@ -59,7 +57,7 @@ export default function NewProjectBox({ onCreated }: { onCreated: (project: Proj
         onKeyDown={onKeyDown}
         rows={3}
         placeholder="e.g. A waitlist page with email capture and a CSV export for admins."
-        className="mt-4 w-full resize-none rounded-xl border border-[var(--gray-alpha-300)] bg-[var(--field-background)] px-4 py-3 text-[15px] leading-relaxed text-[var(--gray-1000)] placeholder:text-[var(--gray-600)] focus:border-[var(--gray-1000)] focus:bg-[var(--field-background-focus)]"
+        className="mt-4 w-full resize-none rounded-xl border border-[var(--gray-alpha-300)] bg-[var(--field-background)] px-4 py-3 text-[15px] leading-relaxed text-[var(--gray-1000)] placeholder:text-[var(--gray-600)] focus:border-[var(--gray-1000)] focus:bg-[var(--field-background-focus)] focus:outline-none"
       />
 
       <div className="mt-4 border-t border-[var(--gray-alpha-100)] pt-4">
@@ -74,11 +72,11 @@ export default function NewProjectBox({ onCreated }: { onCreated: (project: Proj
           <kbd className="font-mono text-[var(--gray-700)]">↵</kbd> to start
         </span>
         <button
-          onClick={submit}
+          onClick={() => void submit()}
           disabled={!canSubmit}
           className="geist-btn geist-btn-primary ml-auto disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {submitting ? "Starting…" : "Start pipeline"}
+          {submitting ? "Starting…" : "Start pipeline →"}
         </button>
       </div>
     </div>
