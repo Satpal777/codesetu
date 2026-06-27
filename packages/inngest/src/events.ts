@@ -1,51 +1,61 @@
 import { eventType } from "inngest";
 import { z } from "zod";
 
-/* ------------------------------------------------------------------ *
- * Event catalog — the single source of truth for everything that can
- * flow through Inngest.
- *
- * Each event is an `eventType(name, { schema })`. The Zod schema (Standard
- * Schema) gives full type-safety + runtime validation, and the returned
- * object doubles as the trigger you hand to a function. Send one with
- * `events.<name>.create(data)`.
- * ------------------------------------------------------------------ */
-
-/** Every stage of the Codesetu pipeline, in order. Mirrors the landing UI. */
-export const STAGE_IDS = ["idea", "document", "tasks", "code", "review", "deploy"] as const;
+/** Every stage of the ShipFlow pipeline, in order. */
+export const STAGE_IDS = [
+  "request",
+  "product_thinking",
+  "prd",
+  "design",
+  "tasks",
+  "implementation",
+  "review",
+  "fixes",
+  "approval",
+  "release",
+] as const;
 export type StageId = (typeof STAGE_IDS)[number];
 
 /**
- * "idea" is the pipeline *input*; these are the stages that actually run and
- * produce an artifact. The orchestrator iterates over this list.
+ * All pipeline stages that the orchestrator runs through.
+ * "request" generates clarifying questions (awaiting_input pause),
+ * "approval" is a human-in-the-loop gate before release.
  */
-export const PROCESSING_STAGES = ["document", "tasks", "code", "review", "deploy"] as const;
-export type ProcessingStage = (typeof PROCESSING_STAGES)[number];
+export const PROCESSING_STAGES = STAGE_IDS;
+export type ProcessingStage = StageId;
 
 /* ----------------------------- Schemas ------------------------------ */
 
 const pipelineRunRequestedSchema = z.object({
-  pipelineId: z.string(),
+  projectId: z.string(),
   userId: z.string(),
-  idea: z.string().min(1, "An idea is required to start a pipeline"),
-  // Resolved { stage -> "provider|model" } map. Picked in the UI, resolved
-  // server-side so each stage runs against the chosen provider/model.
+  idea: z.string().min(1),
   stageModels: z.record(z.string(), z.string()),
+  // Autopilot skips the approval gate; defaults to Co-pilot (waits for sign-off).
+  autopilot: z.boolean().optional(),
 });
 
 const pipelineStageCompletedSchema = z.object({
-  pipelineId: z.string(),
+  projectId: z.string(),
   stage: z.enum(PROCESSING_STAGES),
 });
 
 const pipelineRunCompletedSchema = z.object({
-  pipelineId: z.string(),
+  projectId: z.string(),
   status: z.enum(["completed", "failed"]),
 });
 
 const pipelineRunFailedSchema = z.object({
-  pipelineId: z.string(),
+  projectId: z.string(),
   error: z.string(),
+});
+
+const clarificationsSubmittedSchema = z.object({
+  projectId: z.string(),
+});
+
+const approvalGrantedSchema = z.object({
+  projectId: z.string(),
 });
 
 const userCreatedSchema = z.object({
@@ -56,20 +66,15 @@ const userCreatedSchema = z.object({
 
 /* ----------------------------- Events ------------------------------- */
 
-/**
- * The event registry. Adding an event is a one-line change here (plus its
- * schema above). Use as a trigger: `triggers: [{ event: events.foo }]`;
- * send it: `inngest.send(events.foo.create({ ... }))`.
- */
 export const events = {
   pipelineRunRequested: eventType("pipeline/run.requested", { schema: pipelineRunRequestedSchema }),
   pipelineStageCompleted: eventType("pipeline/stage.completed", { schema: pipelineStageCompletedSchema }),
   pipelineRunCompleted: eventType("pipeline/run.completed", { schema: pipelineRunCompletedSchema }),
   pipelineRunFailed: eventType("pipeline/run.failed", { schema: pipelineRunFailedSchema }),
+  clarificationsSubmitted: eventType("pipeline/clarifications.submitted", { schema: clarificationsSubmittedSchema }),
+  approvalGranted: eventType("pipeline/approval.granted", { schema: approvalGrantedSchema }),
   userCreated: eventType("user/created", { schema: userCreatedSchema }),
 } as const;
-
-/* ----------------------- Inferred payload types --------------------- */
 
 export type PipelineRunRequestedData = z.infer<typeof pipelineRunRequestedSchema>;
 export type PipelineStageCompletedData = z.infer<typeof pipelineStageCompletedSchema>;

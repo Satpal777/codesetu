@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -44,4 +44,81 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
+});
+
+// ── Pipeline domain ────────────────────────────────────────────────────────
+
+export const stageTypeEnum = pgEnum("stage_type", [
+  "request",
+  "product_thinking",
+  "prd",
+  "design",
+  "tasks",
+  "implementation",
+  "review",
+  "fixes",
+  "approval",
+  "release",
+]);
+
+export const stageStatusEnum = pgEnum("stage_status", [
+  "pending",
+  "running",
+  "awaiting_input",
+  "completed",
+  "failed",
+]);
+
+export const project = pgTable("project", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id),
+  title: text("title").notNull(),
+  prompt: text("prompt").notNull(),
+  status: text("status").notNull().default("running"),
+  currentStage: stageTypeEnum("current_stage"),
+  // When true ("Autopilot"), the pipeline runs end-to-end without pausing at the
+  // approval gate. When false ("Co-pilot"), it waits for the user's sign-off.
+  autopilot: boolean("autopilot").notNull().default(false),
+  // Live URL after a one-click Publish (Vercel). Null until deployed.
+  deploymentUrl: text("deployment_url"),
+  repoUrl: text("repo_url"),
+  repoBranch: text("repo_branch"),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+});
+
+export const stage = pgTable("stage", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => project.id),
+  type: stageTypeEnum("type").notNull(),
+  status: stageStatusEnum("status").notNull().default("pending"),
+  order: integer("order").notNull(),
+  error: text("error"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const artifact = pgTable("artifact", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => project.id),
+  stageId: text("stage_id").notNull().references(() => stage.id),
+  type: stageTypeEnum("type").notNull(),
+  content: jsonb("content").notNull(),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at").notNull(),
+});
+
+export const clarification = pgTable("clarification", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => project.id),
+  question: text("question").notNull(),
+  // AI-generated answer choices shown as tap-to-answer cards. Null = free-text only.
+  options: jsonb("options").$type<string[]>(),
+  // Whether to offer a "Something else" free-text escape hatch alongside the options.
+  allowCustom: boolean("allow_custom").notNull().default(true),
+  // Whether the user may pick more than one option.
+  multiSelect: boolean("multi_select").notNull().default(false),
+  answer: text("answer"),
+  order: integer("order").notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });

@@ -1,0 +1,1 @@
+ALTER TABLE "project" ADD COLUMN "deployment_url" text;

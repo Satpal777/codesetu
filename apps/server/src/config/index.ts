@@ -20,4 +20,6 @@ export const config = {
   googleClientId: process.env.GOOGLE_CLIENT_ID!,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
+  // Optional: enables one-click Publish to Vercel. Deploy is disabled if unset.
+  vercelToken: process.env.VERCEL_TOKEN || "",
 };

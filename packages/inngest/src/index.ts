@@ -11,3 +11,4 @@ export { inngest, type InngestClient } from "./client.js";
 export { functions } from "./functions/index.js";
 export { inngestConfig } from "./config.js";
 export * from "./events.js";
+export { pipelineEmitter, type PipelineUpdate } from "./sse.js";

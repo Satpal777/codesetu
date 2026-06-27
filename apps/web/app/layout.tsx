@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Caveat, Patrick_Hand } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { QueryProvider } from "./_components/query-provider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -61,7 +62,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />
-        {children}
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
