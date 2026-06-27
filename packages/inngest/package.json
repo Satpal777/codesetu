@@ -1,0 +1,26 @@
+{
+  "name": "@repo/inngest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./serve": "./src/serve.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/ai": "workspace:*",
+    "@repo/database": "workspace:*",
+    "inngest": "^4.11.0",
+    "nodemailer": "^9.0.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "@types/nodemailer": "^8.0.1",
+    "typescript": "5.9.2"
+  }
+}

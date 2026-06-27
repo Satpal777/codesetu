@@ -1,0 +1,621 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #171717;
+
+    /* Geist (Vercel) — Light theme tokens used by the landing page */
+    --background-100: #ffffff;
+    --background-200: #fafafa;
+    --gray-100: #f2f2f2;
+    --gray-200: #ebebeb;
+    --gray-300: #e6e6e6;
+    --gray-400: #d9d9d9;
+    --gray-500: #c9c9c9;
+    --gray-600: #a8a8a8;
+    --gray-700: #8f8f8f;
+    --gray-800: #7d7d7d;
+    --gray-900: #4d4d4d;
+    --gray-1000: #171717;
+    --gray-alpha-100: #0000000d;
+    --gray-alpha-200: #00000015;
+    --gray-alpha-300: #0000001a;
+    --gray-alpha-400: #00000024;
+    --gray-alpha-500: #00000036;
+    --gray-alpha-600: #0000003d;
+    --blue-700: #006bff;
+    --red-900: #d8001b;
+    --amber-700: #ffae00;
+    --green-800: #279141;
+
+    /* Strong custom easings (theme-independent). UI motion should feel
+       intentional — the built-in CSS easings are too weak. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --header-background: rgba(255, 255, 255, 0.8);
+    --button-primary-hover: #383838;
+    --card-hover-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+    --field-background: #fafafa;
+    --field-background-focus: #ffffff;
+    --pipeline-ink: #2d2d2d;
+    --pipeline-paper: #ffffff;
+    --pipeline-glass: rgba(255, 255, 255, 0.65);
+    --pipeline-muted-ink: rgba(45, 45, 45, 0.5);
+    --pipeline-soft-ink: rgba(45, 45, 45, 0.28);
+    --pipeline-faint-ink: rgba(45, 45, 45, 0.12);
+    --pipeline-shadow: rgba(45, 45, 45, 0.15);
+
+    /* Scribble palette — retained only for the kept idea→production animation */
+    --notebook-grid: rgba(0, 0, 0, 0.045);
+    --scribble-ink: #2D2D2D;
+    --scribble-yellow: #FDE047;
+    --scribble-lavender: #E9D5FF;
+    --scribble-blue: #BFDBFE;
+    --scribble-tape: #FECACA;
+    --scribble-green: #D1FAE5;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --background: #000000;
+    --foreground: #ededed;
+    --background-100: #0a0a0a;
+    --background-200: #111111;
+    --gray-100: #1a1a1a;
+    --gray-200: #1f1f1f;
+    --gray-300: #292929;
+    --gray-400: #333333;
+    --gray-500: #4a4a4a;
+    --gray-600: #666666;
+    --gray-700: #8f8f8f;
+    --gray-800: #a8a8a8;
+    --gray-900: #c9c9c9;
+    --gray-1000: #ededed;
+    --gray-alpha-100: #ffffff0f;
+    --gray-alpha-200: #ffffff17;
+    --gray-alpha-300: #ffffff1f;
+    --gray-alpha-400: #ffffff24;
+    --gray-alpha-500: #ffffff36;
+    --gray-alpha-600: #ffffff4d;
+    --blue-700: #3291ff;
+    --red-900: #ff6166;
+    --amber-700: #f5a400;
+    --green-800: #45d483;
+
+    --header-background: rgba(10, 10, 10, 0.78);
+    --button-primary-hover: #ffffff;
+    --card-hover-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
+    --field-background: #111111;
+    --field-background-focus: #0a0a0a;
+    --pipeline-ink: #f5f5f5;
+    --pipeline-paper: #141414;
+    --pipeline-glass: rgba(20, 20, 20, 0.72);
+    --pipeline-muted-ink: rgba(245, 245, 245, 0.56);
+    --pipeline-soft-ink: rgba(245, 245, 245, 0.28);
+    --pipeline-faint-ink: rgba(245, 245, 245, 0.14);
+    --pipeline-shadow: rgba(0, 0, 0, 0.5);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Offset anchor targets so they clear the 64px sticky header */
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  /* Geist two-layer focus ring: a gap in the surface, then a blue-700 ring */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background-100), 0 0 0 4px var(--blue-700);
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body {
+      transition: none;
+    }
+  }
+}
+
+@layer components {
+  .font-hand-title {
+    font-family: var(--font-caveat), cursive, sans-serif;
+  }
+  
+  .font-hand-body {
+    font-family: var(--font-patrick-hand), cursive, sans-serif;
+  }
+
+  .notebook-paper {
+    background-color: #FDF9F1;
+    background-image: 
+      linear-gradient(var(--notebook-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--notebook-grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: local;
+  }
+
+  .notebook-binder-edge {
+    position: relative;
+  }
+  
+  .notebook-binder-edge::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 12px;
+    bottom: 0;
+    width: 20px;
+    background-image: radial-gradient(circle, #EAE5DB 6px, transparent 7px);
+    background-size: 100% 32px;
+    background-position: center;
+    border-right: 1px solid rgba(45, 45, 45, 0.1);
+    z-index: 10;
+  }
+  
+  .notebook-margin-line {
+    border-left: 2px solid rgba(239, 68, 68, 0.25);
+    padding-left: 1.5rem;
+  }
+
+  .wobbly-border {
+    border: 3px solid var(--scribble-ink);
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  }
+  
+  .wobbly-border-alt {
+    border: 3px solid var(--scribble-ink);
+    border-radius: 15px 225px 15px 255px / 255px 15px 225px 15px;
+  }
+  
+  .wobbly-border-sm {
+    border: 2px solid var(--scribble-ink);
+    border-radius: 120px 10px 90px 12px / 10px 110px 8px 120px;
+  }
+
+  .wobbly-border-btn {
+    border: 2.5px solid var(--scribble-ink);
+    border-radius: 100px 8px 120px 8px / 8px 120px 8px 100px;
+    box-shadow: 3px 3px 0px var(--scribble-ink);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    cursor: pointer;
+  }
+  
+  .wobbly-border-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px var(--scribble-ink);
+  }
+  
+  .wobbly-border-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px var(--scribble-ink);
+  }
+
+  .washi-tape {
+    position: absolute;
+    height: 28px;
+    width: 90px;
+    background-color: var(--scribble-tape);
+    opacity: 0.85;
+    border: 1px dashed rgba(45, 45, 45, 0.2);
+    box-shadow: 1px 2px 4px rgba(45, 45, 45, 0.1);
+    transform: rotate(-8deg);
+    clip-path: polygon(
+      0% 20%, 8% 5%, 92% 0%, 100% 25%,
+      98% 80%, 90% 100%, 10% 92%, 0% 75%
+    );
+    z-index: 20;
+    pointer-events: none;
+  }
+  
+  .washi-tape-yellow {
+    background-color: var(--scribble-yellow);
+    transform: rotate(5deg);
+  }
+  
+  .washi-tape-blue {
+    background-color: var(--scribble-blue);
+    transform: rotate(-4deg);
+  }
+  
+  .washi-tape-lavender {
+    background-color: var(--scribble-lavender);
+    transform: rotate(3deg);
+  }
+
+  .paper-card {
+    background-color: #FFFFFF;
+    border: 2px solid var(--scribble-ink);
+    border-radius: 8px 4px 8px 4px / 4px 8px 4px 8px;
+    box-shadow: 4px 6px 12px rgba(45, 45, 45, 0.08);
+  }
+
+  .sticky-note {
+    background-color: var(--scribble-blue);
+    border: 2px solid var(--scribble-ink);
+    border-radius: 4px 12px 3px 18px / 12px 4px 18px 3px;
+    box-shadow: 4px 4px 0px var(--scribble-ink);
+    transform: rotate(2deg);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .sticky-note:hover {
+    transform: rotate(0deg) scale(1.02);
+    box-shadow: 6px 6px 0px var(--scribble-ink);
+  }
+
+  .highlight-yellow {
+    background: linear-gradient(120deg, rgba(253, 224, 71, 0.4) 0%, rgba(253, 224, 71, 0.7) 100%);
+    border-radius: 0.5em 0;
+    padding: 0 4px;
+  }
+  
+  .highlight-pink {
+    background: linear-gradient(120deg, rgba(254, 202, 202, 0.4) 0%, rgba(254, 202, 202, 0.7) 100%);
+    border-radius: 0.5em 0;
+    padding: 0 4px;
+  }
+
+  .speech-bubble {
+    position: relative;
+    background: #FFFFFF;
+    border: 2.5px solid var(--scribble-ink);
+    border-radius: 16px;
+    box-shadow: 3px 3px 0px var(--scribble-ink);
+    padding: 12px 18px;
+  }
+  
+  .speech-bubble::after, .speech-bubble::before {
+    content: "";
+    position: absolute;
+    border-style: solid;
+    display: block;
+    width: 0;
+  }
+  
+  .speech-bubble-left::after {
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 8px 12px 8px 0;
+    border-color: transparent #FFFFFF transparent transparent;
+    z-index: 10;
+  }
+  .speech-bubble-left::before {
+    left: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 9px 14px 9px 0;
+    border-color: transparent var(--scribble-ink) transparent transparent;
+    z-index: 5;
+  }
+
+  .speech-bubble-bottom::after {
+    bottom: -12px;
+    left: 30px;
+    border-width: 12px 8px 0 8px;
+    border-color: #FFFFFF transparent transparent transparent;
+    z-index: 10;
+  }
+  .speech-bubble-bottom::before {
+    bottom: -15px;
+    left: 29px;
+    border-width: 14px 9px 0 9px;
+    border-color: var(--scribble-ink) transparent transparent transparent;
+    z-index: 5;
+  }
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+  }
+  .animate-wiggle {
+    animation: wiggle 3s ease-in-out infinite;
+  }
+
+  .console-wrapper {
+    background: #FFFFFF;
+    border: 2px solid var(--scribble-ink);
+    border-radius: 6px;
+    box-shadow: 3px 3px 0px var(--scribble-ink);
+    padding: 12px;
+  }
+  .console-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .console-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--scribble-ink);
+  }
+  .dot-red { background: #FEF08A; }
+  .dot-yellow { background: #BFDBFE; }
+  .dot-green { background: #E9D5FF; }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid var(--scribble-ink);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    background: #FFFFFF;
+  }
+  .status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--scribble-ink);
+    position: relative;
+  }
+  .status-online {
+    background-color: #4ADE80;
+  }
+  .status-offline {
+    background-color: #F87171;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Geist (Vercel) primitives — buttons & cards for the landing page.
+ * Motion uses the system easing and the short 150ms state duration.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .geist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-family: var(--font-geist-sans), sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      border-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      transform 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  .geist-btn:active {
+    transform: scale(0.97);
+  }
+
+  .geist-btn-lg {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 16px;
+  }
+
+  .geist-btn-primary {
+    background: var(--gray-1000);
+    color: var(--background-100);
+    border-color: var(--gray-1000);
+  }
+  .geist-btn-primary:hover {
+    background: var(--button-primary-hover);
+    border-color: var(--button-primary-hover);
+  }
+
+  .geist-btn-secondary {
+    background: var(--background-100);
+    color: var(--gray-1000);
+    border-color: var(--gray-alpha-400);
+  }
+  .geist-btn-secondary:hover {
+    background: var(--background-200);
+    border-color: var(--gray-alpha-500);
+  }
+
+  .geist-btn-ghost {
+    background: transparent;
+    color: var(--gray-1000);
+  }
+  .geist-btn-ghost:hover {
+    background: var(--gray-alpha-100);
+  }
+
+  .geist-card {
+    background: var(--background-100);
+    border: 1px solid var(--gray-alpha-300);
+    border-radius: 12px;
+    transition: background-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      border-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      box-shadow 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+  .geist-card:hover {
+    border-color: var(--gray-alpha-500);
+    box-shadow: var(--card-hover-shadow);
+  }
+
+  .theme-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--gray-1000);
+    cursor: pointer;
+    padding: 0;
+    user-select: none;
+  }
+
+  .theme-switch:focus-visible {
+    border-radius: 9999px;
+  }
+
+  .theme-switch__track {
+    position: relative;
+    display: block;
+    height: 36px;
+    width: 68px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: 9999px;
+    background: var(--background-200);
+    box-shadow: inset 0 1px 2px var(--gray-alpha-100);
+    transition: background-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      border-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  .theme-switch__thumb {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    z-index: 1;
+    display: grid;
+    height: 28px;
+    width: 28px;
+    place-items: center;
+    border-radius: 9999px;
+    background: var(--background-100);
+    color: var(--gray-1000);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 4px 12px -6px rgba(0, 0, 0, 0.35);
+    will-change: transform;
+    transition: background-color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  .theme-switch__glyph {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    color: var(--gray-700);
+    opacity: 0.58;
+    transform: translateY(-50%);
+    transition: color 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+      opacity 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  .theme-switch__glyph--sun {
+    left: 10px;
+  }
+
+  .theme-switch__glyph--moon {
+    right: 10px;
+  }
+
+  .theme-switch[data-state="light"] .theme-switch__glyph--sun,
+  .theme-switch[data-state="dark"] .theme-switch__glyph--moon {
+    color: var(--gray-1000);
+    opacity: 0.78;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .theme-switch:hover .theme-switch__track {
+      border-color: var(--gray-alpha-500);
+      background: var(--gray-alpha-100);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .geist-btn,
+    .geist-card,
+    .theme-switch__track,
+    .theme-switch__thumb,
+    .theme-switch__glyph {
+      transition-duration: 0ms;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Polish primitives — reusable press feedback, premium backdrops,
+ * and a staggered entrance. Transform/opacity only (GPU), strong
+ * ease-out, and motion is dropped under prefers-reduced-motion.
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* Press feedback for any pressable that isn't a .geist-btn. */
+  .press {
+    transition: transform 140ms var(--ease-out), background-color 140ms var(--ease-out),
+      border-color 140ms var(--ease-out), color 140ms var(--ease-out);
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+
+  /* Faint dotted grid for depth behind hero areas. */
+  .dot-grid {
+    background-image: radial-gradient(var(--gray-alpha-200) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Soft brand glow, anchored to the top of a section. */
+  .hero-glow {
+    background: radial-gradient(
+      60% 60% at 50% 0%,
+      color-mix(in srgb, var(--blue-700) 9%, transparent),
+      transparent 70%
+    );
+  }
+
+  /* Focus ring used by the idea composer (two-layer: surface gap + soft glow). */
+  .composer-focus:focus-within {
+    border-color: var(--gray-1000);
+    box-shadow: 0 0 0 1px var(--gray-1000),
+      0 0 0 5px color-mix(in srgb, var(--blue-700) 14%, transparent);
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-rise {
+    animation: rise 0.45s var(--ease-out) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .press,
+    .composer-focus {
+      transition-duration: 0ms;
+    }
+    .press:active {
+      transform: none;
+    }
+    .animate-rise {
+      animation: none;
+    }
+  }
+}

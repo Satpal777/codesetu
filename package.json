@@ -1,34 +1,27 @@
 {
-  "name": "zerotoprod",
-  "version": "0.1.0",
+  "name": "codesetu",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.105.0",
-    "@insforge/sdk": "^1.4.2",
-    "@octokit/auth-app": "^8.2.0",
-    "@octokit/rest": "^22.0.1",
-    "@octokit/webhooks": "^14.2.0",
-    "e2b": "^2.30.4",
-    "inngest": "^4.7.0",
-    "next": "16.2.9",
-    "openai": "^6.44.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "inngest:dev": "npx --yes inngest-cli@latest dev -u http://localhost:5001/api/inngest",
+    "env:sync": "node scripts/sync-env.js",
+    "postinstall": "node scripts/sync-env.js"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "prettier": "^3.7.4",
+    "turbo": "^2.9.18",
+    "typescript": "5.9.2"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }
