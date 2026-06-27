@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "../../_lib/auth-client";
 import ThemeSwitch from "../../_components/theme-switch";
 import AssemblyPanel from "../_components/assembly-panel";
@@ -524,15 +525,9 @@ function StageCard({ stage, artifact, isActive, clarifications, projectId, onCla
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ?? null;
+  const queryClient = useQueryClient();
 
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [project, setProject] = useState<Project | null>(null);
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
-  const [clarifications, setClarifications] = useState<Clarification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [approving, setApproving] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   // Unwrap Next.js 16 async params
@@ -540,33 +535,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     void params.then((p) => setProjectId(p.id));
   }, [params]);
 
-  const refreshProject = useCallback(async (id: string, signal?: AbortSignal) => {
-    const proj = await getProject(id, signal);
-    setProject(proj);
-    setStages(proj.stages ?? []);
-    setArtifacts(proj.artifacts ?? []);
-    setClarifications(proj.clarifications ?? []);
-  }, []);
+  // Project data — SSE keeps this fresh; staleTime:0 means every invalidation re-fetches
+  const {
+    data: project,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: ({ signal }) => getProject(projectId!, signal),
+    enabled: !!projectId && !!user,
+    staleTime: 0,
+  });
 
-  // Initial load
-  useEffect(() => {
-    if (!projectId || !user) return;
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    refreshProject(projectId, controller.signal)
-      .catch((err) => {
-        if (!controller.signal.aborted) {
-          setError(err instanceof Error ? err.message : "Failed to load project");
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [projectId, user, refreshProject]);
+  // Derive sub-collections from the single query result
+  const stages = project?.stages ?? [];
+  const artifacts = project?.artifacts ?? [];
+  const clarifications = project?.clarifications ?? [];
 
-  // SSE for live stage updates
+  // Approve mutation
+  const { mutate: approve, isPending: approving } = useMutation({
+    mutationFn: () => approveProject(projectId!),
+    onError: (err) => console.error(err),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
+  });
+
+  // SSE for live stage updates — keeps optimistic state in query cache
   useEffect(() => {
     if (!projectId || !user) return;
 
@@ -583,9 +578,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           artifact?: unknown;
         };
 
-        // Update the stage in local state
-        setStages((prev) =>
-          prev.map((s) =>
+        // Optimistic update in the cache — keeps UI responsive before the DB re-fetch
+        queryClient.setQueryData<Project>(["project", projectId], (prev) => {
+          if (!prev) return prev;
+
+          const updatedStages = (prev.stages ?? []).map((s) =>
             s.type === update.stage
               ? {
                   ...s,
@@ -594,30 +591,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   ...(update.status === "completed" ? { completedAt: new Date().toISOString() } : {}),
                 }
               : s
-          )
-        );
+          );
 
-        // Update project status
-        if (update.status === "awaiting_input" || update.status === "completed" || update.status === "running") {
-          setProject((prev) =>
-            prev
+          const newProjectStatus =
+            update.status === "completed" && update.stage === "release"
+              ? "completed"
+              : update.status === "awaiting_input"
+              ? "awaiting_input"
+              : "running";
+
+          return {
+            ...prev,
+            stages: updatedStages,
+            ...(["awaiting_input", "completed", "running"].includes(update.status)
               ? {
-                  ...prev,
-                  status: (update.status === "completed" && update.stage === "release"
-                    ? "completed"
-                    : update.status === "awaiting_input"
-                    ? "awaiting_input"
-                    : "running") as typeof prev.status,
+                  status: newProjectStatus as Project["status"],
                   currentStage: update.stage as StageType,
                   updatedAt: new Date().toISOString(),
                 }
-              : prev
-          );
-        }
+              : {}),
+          };
+        });
 
-        // When a stage completes, refresh to get the new artifact from DB
+        // Full re-fetch when a stage completes to pick up new artifacts from DB
         if (update.status === "completed" || update.status === "awaiting_input") {
-          void refreshProject(projectId).catch(() => null);
+          void queryClient.invalidateQueries({ queryKey: ["project", projectId] });
         }
       } catch {
         // ignore parse errors
@@ -632,22 +630,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       es.close();
       esRef.current = null;
     };
-  }, [projectId, user, refreshProject]);
-
-  const handleApprove = async () => {
-    if (!projectId || approving) return;
-    setApproving(true);
-    try {
-      await approveProject(projectId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to approve");
-    } finally {
-      setApproving(false);
-    }
-  };
+  }, [projectId, user, queryClient]);
 
   const handleClarificationsSubmitted = () => {
-    if (projectId) void refreshProject(projectId).catch(() => null);
+    void queryClient.invalidateQueries({ queryKey: ["project", projectId] });
   };
 
   const approvalStage = stages.find((s) => s.type === "approval");
@@ -674,10 +660,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // Only block the full page on the very first session+project load.
   // Background session refetches must NOT unmount ThemeSwitch.
   const isInitialSessionLoad = loadingUser && !user;
-  const isProjectLoading = !loadingUser && user && loading;
+  const isProjectLoading = !loadingUser && user && isLoading;
   const isNotLoggedIn = !loadingUser && !user;
-  const isError = !loadingUser && user && !loading && (!!error || !project);
-  const showProject = !loadingUser && !!user && !loading && !error && !!project;
+  const hasError = !loadingUser && user && !isLoading && (isError || !project);
+  const showProject = !loadingUser && !!user && !isLoading && !isError && !!project;
 
   return (
     <div className={`min-h-screen ${showProject ? "bg-[var(--background-200)]" : "bg-[var(--background-100)]"} text-[var(--gray-1000)]`}>
@@ -751,10 +737,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* ─── Error / project not found ─── */}
-      {isError && (
+      {hasError && (
         <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4">
           <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn't load project</p>
-          <p className="text-[13px] text-[var(--gray-700)]">{error}</p>
+          <p className="text-[13px] text-[var(--gray-700)]">
+            {error instanceof Error ? error.message : "Something went wrong."}
+          </p>
           <Link href="/dashboard" className="geist-btn geist-btn-secondary">← Back to dashboard</Link>
         </div>
       )}
@@ -816,7 +804,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 We&apos;ve finished building. Take a look below, then give it the thumbs-up.
               </p>
               <button
-                onClick={() => void handleApprove()}
+                onClick={() => approve()}
                 disabled={approving}
                 className="geist-btn geist-btn-primary mt-4 disabled:opacity-40"
               >

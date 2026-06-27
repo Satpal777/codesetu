@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserResponse } from "@repo/schemas";
 import { authClient } from "../_lib/auth-client";
 import ThemeSwitch from "../_components/theme-switch";
@@ -12,8 +12,6 @@ import ProjectCard from "./_components/project-card";
 
 const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
 const EASE = [0.175, 0.885, 0.32, 1.1] as const;
-
-type LoadState = "loading" | "ready" | "error";
 
 function Brand() {
   return (
@@ -29,32 +27,19 @@ function Brand() {
 export default function DashboardPage() {
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ? (session.user as unknown as UserResponse) : null;
+  const queryClient = useQueryClient();
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [state, setState] = useState<LoadState>("loading");
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setState("loading");
-    setError(null);
-    try {
-      const data = await listProjects(signal);
-      if (signal?.aborted) return;
-      setProjects(data);
-      setState("ready");
-    } catch (err) {
-      if (signal?.aborted) return;
-      setError(err instanceof Error ? err.message : "Something went wrong.");
-      setState("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [user, load]);
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["projects"],
+    queryFn: ({ signal }) => listProjects(signal),
+    enabled: !!user,
+  });
 
   const handleSignOut = async () => {
     try {
@@ -72,9 +57,11 @@ export default function DashboardPage() {
     }
   };
 
-  // Only show the full-screen spinner on the very first load before any user data arrives.
-  // Once we have (or have confirmed the absence of) a user, keep that UI stable so
-  // ThemeSwitch is never unmounted by a background session refetch.
+  const handleProjectCreated = (project: Project) => {
+    queryClient.setQueryData<Project[]>(["projects"], (prev) => [project, ...(prev ?? [])]);
+  };
+
+  // Only block with spinner before we know the session state at all.
   const isInitialLoad = loadingUser && !user;
 
   return (
@@ -176,33 +163,35 @@ export default function DashboardPage() {
             transition={{ duration: 0.5, delay: 0.06, ease: EASE }}
             className="mt-8"
           >
-            <NewProjectBox onCreated={(project) => setProjects((prev) => [project, ...prev])} />
+            <NewProjectBox onCreated={handleProjectCreated} />
           </motion.div>
 
           <section className="mt-14">
             <div className="flex items-baseline justify-between">
               <h2 className="text-sm font-semibold tracking-[-0.01em] text-[var(--gray-1000)]">Your projects</h2>
-              {state === "ready" && projects.length > 0 && (
+              {!projectsLoading && !isError && projects.length > 0 && (
                 <span className="text-[13px] text-[var(--gray-600)]">{projects.length} total</span>
               )}
             </div>
 
             <div className="mt-5">
-              {state === "loading" && <ProjectsSkeleton />}
+              {projectsLoading && <ProjectsSkeleton />}
 
-              {state === "error" && (
+              {isError && (
                 <div className="rounded-2xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] px-6 py-12 text-center">
                   <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn't load your projects</p>
-                  <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-[var(--gray-700)]">{error}</p>
-                  <button onClick={() => load()} className="geist-btn geist-btn-secondary mt-5">
+                  <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-[var(--gray-700)]">
+                    {error instanceof Error ? error.message : "Something went wrong."}
+                  </p>
+                  <button onClick={() => void refetch()} className="geist-btn geist-btn-secondary mt-5">
                     Try again
                   </button>
                 </div>
               )}
 
-              {state === "ready" && projects.length === 0 && <EmptyState />}
+              {!projectsLoading && !isError && projects.length === 0 && <EmptyState />}
 
-              {state === "ready" && projects.length > 0 && (
+              {!projectsLoading && !isError && projects.length > 0 && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {projects.map((project, i) => (
                     <ProjectCard key={project.id} project={project} index={i} />

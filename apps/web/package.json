@@ -13,6 +13,8 @@
   "dependencies": {
     "@repo/schemas": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@tanstack/react-query": "^5.101.1",
+    "@tanstack/react-query-devtools": "^5.101.1",
     "better-auth": "^1.1.18",
     "motion": "^12.41.0",
     "next": "16.2.0",
