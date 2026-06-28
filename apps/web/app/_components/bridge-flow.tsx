@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { SparklesCore } from "./ui/sparkles";
 
 /**
  * BridgeFlow — the "watch an idea cross the bridge" animation.
@@ -254,7 +255,26 @@ export default function BridgeFlow() {
               {icon}
             </g>
           ))}
+          <clipPath id="sparkles-clip">
+            <path d={`${PATH_D} L1120 300 L80 300 Z`} />
+          </clipPath>
         </defs>
+
+        <foreignObject x="70" y="0" width="1060" height="282" clipPath="url(#sparkles-clip)">
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--white)] to-transparent z-10 pointer-events-none" />
+            <SparklesCore
+              background="transparent"
+              minSize={1.2}
+              maxSize={3}
+              particleDensity={150}
+              className="w-full h-full"
+              particleColor="#4f46e5"
+              speed={0.8}
+              direction="top"
+            />
+          </div>
+        </foreignObject>
 
         {/* The arch: faint dotted track + bright deck that fills behind the comet */}
         <path id="flow-base" className="cs-flow-base" d={PATH_D} fill="none" strokeWidth={2} strokeLinecap="round" strokeDasharray="1 8" />

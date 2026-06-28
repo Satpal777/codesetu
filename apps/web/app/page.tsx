@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
 import BridgeFlow from "./_components/bridge-flow";
 import ThemeToggle from "./_components/theme-toggle";
@@ -127,25 +128,37 @@ export default function Home() {
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ? (session.user as unknown as UserResponse) : null;
 
-  // Direct Google sign-in — no modal, no scroll.
+  // Auth UX state — without this, a failed/slow sign-in looks like a dead button.
+  const [authPending, setAuthPending] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Direct Google sign-in — no modal, no scroll. On success the client redirects
+  // the browser to Google, so we intentionally stay in the pending state.
   const handleGoogleLogin = async () => {
+    setAuthError(null);
+    setAuthPending(true);
     try {
       await authClient.signIn.social({ provider: "google", callbackURL: FRONTEND_URL });
     } catch (err) {
       console.error("Google sign-in failed:", err);
+      setAuthError("Couldn't reach the sign-in server. Make sure the backend is running, then try again.");
+      setAuthPending(false);
     }
   };
 
   const handleSignOut = async () => {
+    setAuthError(null);
     try {
       await authClient.signOut();
     } catch (err) {
       console.error("Sign out failed:", err);
+      setAuthError("Sign out failed. Please try again.");
     }
   };
 
   // Primary CTA: signed-in users cross into the app; everyone else signs in.
   const goPrimary = () => {
+    if (authPending) return;
     if (user) window.location.href = "/dashboard";
     else handleGoogleLogin();
   };
@@ -200,11 +213,15 @@ export default function Home() {
               </>
             ) : (
               <>
-                <button onClick={handleGoogleLogin} className="hidden text-sm font-medium text-[var(--ink-700)] transition-opacity hover:opacity-60 sm:inline">
+                <button
+                  onClick={handleGoogleLogin}
+                  disabled={authPending}
+                  className="hidden text-sm font-medium text-[var(--ink-700)] transition-opacity hover:opacity-60 disabled:opacity-50 sm:inline"
+                >
                   Sign in
                 </button>
-                <button onClick={goPrimary} className="cs-btn cs-btn-sm cs-btn-solid">
-                  Start free
+                <button onClick={goPrimary} disabled={authPending} className="cs-btn cs-btn-sm cs-btn-solid disabled:opacity-60">
+                  {authPending ? "Connecting…" : "Start free"}
                 </button>
               </>
             )}
@@ -229,17 +246,17 @@ export default function Home() {
                 {...load(0.05)}
                 className="cs-display mb-6 text-balance text-[clamp(44px,5vw,76px)] text-[var(--ink-950)]"
               >
-                From a spark of an idea to shipped — in one continuous flow.
+                From a spark of an idea to shipped
               </motion.h1>
 
               <motion.p {...load(0.12)} className="mb-10 max-w-[480px] text-[18px] leading-[1.65] text-[var(--ink-600)]">
                 CodeSetu is the bridge between thinking and shipping. Describe what you want; watch it become a plan, a
-                document, real code, a live preview, and a deployment — without ever leaving the flow.
+                document, real code, a live preview, and a deployment.
               </motion.p>
 
               <motion.div {...load(0.18)} className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
-                <button onClick={goPrimary} className="cs-btn cs-btn-lg cs-btn-solid">
-                  Start building free
+                <button onClick={goPrimary} disabled={authPending} className="cs-btn cs-btn-lg cs-btn-solid disabled:opacity-60">
+                  {authPending ? "Connecting…" : "Start building free"}
                 </button>
                 <a href="#flow" className="cs-btn cs-btn-lg cs-btn-outline">
                   See it in motion
@@ -331,10 +348,100 @@ export default function Home() {
             </motion.div>
 
             <motion.div {...reveal(0.2)} className="mt-20 grid gap-10 md:grid-cols-3">
+              {/* SVG Gradient definitions for the lamp beams */}
+              <svg className="absolute w-0 h-0" aria-hidden="true">
+                <defs>
+                  <linearGradient id="lamp-indigo-beam" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
+                    <stop offset="40%" stopColor="#6366f1" stopOpacity="0.10" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="lamp-sky-beam" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.4" />
+                    <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+              </svg>
+
               {FLOW_CAPTIONS.map((c) => (
-                <div key={c.label} className="border-t-[1.5px] border-[var(--ink-950)] pt-[18px]">
-                  <div className="cs-mono mb-2.5 text-[11px] uppercase tracking-[0.12em] text-[var(--ink-400)]">{c.label}</div>
-                  <p className="text-[16px] leading-[1.55] text-[var(--ink-700)]">{c.body}</p>
+                <div 
+                  key={c.label} 
+                  className="relative border-t border-[var(--ink-100)] pt-[28px] pb-[16px] px-6 overflow-hidden group min-h-[190px] rounded-b-lg transition-all duration-500 hover:shadow-[0_10px_30px_rgba(99,102,241,0.04)]"
+                >
+                  {/* Lamp Highlight Effect (Continuous Volumetric Beams) */}
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0">
+                    {/* Glowing top line (Base of the lamp) */}
+                    <motion.div 
+                      initial={{ width: "20%", opacity: 0 }}
+                      whileInView={{ width: "100%", opacity: 1 }}
+                      transition={{ duration: 1.2, ease: EASE }}
+                      className="absolute top-0 left-1/2 -translate-x-1/2 h-[2.5px] w-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent blur-[0.5px] z-10"
+                    />
+                    <motion.div 
+                      initial={{ width: "10%", opacity: 0 }}
+                      whileInView={{ width: "80%", opacity: 0.8 }}
+                      transition={{ duration: 1.4, ease: EASE }}
+                      className="absolute top-0 left-1/2 -translate-x-1/2 h-[1px] w-full bg-gradient-to-r from-transparent via-sky-300 to-transparent z-10"
+                    />
+                    
+                    {/* Volumetric Beam 1 (Wide, soft Indigo) */}
+                    <motion.svg 
+                      initial={{ opacity: 0, scaleY: 0.3 }}
+                      whileInView={{ opacity: 0.75, scaleY: 1 }}
+                      whileHover={{ opacity: 0.95 }}
+                      transition={{ duration: 1.2, ease: EASE }}
+                      style={{ originY: 0 }}
+                      className="absolute inset-x-0 top-0 w-full h-48 filter blur-xl" 
+                      viewBox="0 0 400 200" 
+                      preserveAspectRatio="none"
+                    >
+                      <polygon points="80,0 320,0 360,200 40,200" fill="url(#lamp-indigo-beam)" />
+                    </motion.svg>
+
+                    {/* Volumetric Beam 2 (Narrower, brighter Sky Blue) */}
+                    <motion.svg 
+                      initial={{ opacity: 0, scaleY: 0.3 }}
+                      whileInView={{ opacity: 0.85, scaleY: 1 }}
+                      whileHover={{ opacity: 1, scaleY: 1.05 }}
+                      transition={{ duration: 1.4, ease: EASE }}
+                      style={{ originY: 0 }}
+                      className="absolute inset-x-0 top-0 w-full h-48 filter blur-md" 
+                      viewBox="0 0 400 200" 
+                      preserveAspectRatio="none"
+                    >
+                      <polygon points="150,0 250,0 280,200 120,200" fill="url(#lamp-sky-beam)" />
+                    </motion.svg>
+
+                    {/* Ambient Radial Glow centered under the line */}
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      whileInView={{ opacity: 0.6, scale: 1 }}
+                      transition={{ duration: 1.2, ease: EASE }}
+                      className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.25),transparent_70%)] blur-md"
+                    />
+                    
+                    {/* Central glowing core dot */}
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 0.8 }}
+                      transition={{ duration: 1.5, ease: EASE }}
+                      className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-[5px] rounded-full bg-sky-200 blur-[2px]"
+                    />
+
+                    {/* Bottom fade overlay */}
+                    <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--white)] to-transparent pointer-events-none" />
+                  </div>
+
+                  {/* Text contents (reacts with color transition on hover) */}
+                  <div className="relative z-10 transition-colors duration-500">
+                    <div className="cs-mono mb-2.5 text-[11px] uppercase tracking-[0.12em] text-[var(--ink-400)] transition-colors duration-500 group-hover:text-indigo-600 font-semibold">
+                      {c.label}
+                    </div>
+                    <p className="text-[16px] leading-[1.55] text-[var(--ink-700)] transition-colors duration-500 group-hover:text-[var(--ink-950)]">
+                      {c.body}
+                    </p>
+                  </div>
                 </div>
               ))}
             </motion.div>
@@ -386,8 +493,8 @@ export default function Home() {
               Start with a sentence. Ship something real today. CodeSetu carries it the whole way across.
             </motion.p>
             <motion.div {...reveal(0.16)} className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <button onClick={goPrimary} className="cs-btn cs-btn-lg cs-btn-solid">
-                Start building free
+              <button onClick={goPrimary} disabled={authPending} className="cs-btn cs-btn-lg cs-btn-solid disabled:opacity-60">
+                {authPending ? "Connecting…" : "Start building free"}
               </button>
               <a href="#flow" className="cs-btn cs-btn-lg cs-btn-outline">
                 Talk to us
@@ -412,6 +519,26 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* Auth error toast — makes failures visible instead of silently failing. */}
+      {authError && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: EASE }}
+          role="alert"
+          className="fixed inset-x-0 bottom-6 z-[60] mx-auto flex max-w-[480px] items-start gap-3 rounded-[4px] border border-[var(--ink-300)] bg-[var(--white)] px-4 py-3 text-[14px] text-[var(--ink-900)] shadow-[6px_6px_0_0_var(--ink-950)]"
+        >
+          <span className="leading-[1.5]">{authError}</span>
+          <button
+            onClick={() => setAuthError(null)}
+            aria-label="Dismiss"
+            className="ml-auto shrink-0 text-[var(--ink-400)] transition-opacity hover:opacity-60"
+          >
+            ✕
+          </button>
+        </motion.div>
+      )}
     </div>
   );
 }
