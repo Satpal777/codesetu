@@ -7,6 +7,7 @@ import { authClient } from "../_lib/auth-client";
 import { listProjects, relativeTime, type Project } from "./_lib/projects";
 import NewProjectBox from "./_components/new-project-box";
 import ThemeToggle from "../_components/theme-toggle";
+import DeleteProjectModal from "./_components/delete-project-modal";
 
 const SUGGESTIONS = [
   "Landing page for my SaaS",
@@ -82,6 +83,12 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
   const composerRef = useRef<HTMLDivElement>(null);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+
+  const handleProjectDeleted = (id: string) => {
+    queryClient.setQueryData<Project[]>(["projects"], (prev) => prev?.filter((p) => p.id !== id) ?? []);
+    setDeletingProject(null);
+  };
 
   const handleTemplateClick = (templatePrompt: string) => {
     setPrompt(templatePrompt);
@@ -198,8 +205,21 @@ export default function DashboardPage() {
                 const statusLabel = STATUS_LABELS[p.status] || p.status;
 
                 return (
+                  <div key={p.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => setDeletingProject(p)}
+                      title="Delete project"
+                      className="absolute top-2 right-2 z-10 hidden group-hover:flex h-6 w-6 items-center justify-center rounded border border-[var(--border-default)] bg-[var(--bg-raised)] text-[var(--text-tertiary)] hover:border-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                      </svg>
+                    </button>
                   <Link
-                    key={p.id}
                     href={`/dashboard/${p.id}`}
                     className="press block w-full rounded border border-[var(--border-default)] bg-[var(--surface-card)] p-4 text-left shadow-sm hover:border-[var(--border-strong)]"
                   >
@@ -226,6 +246,7 @@ export default function DashboardPage() {
                       <span>{relativeTime(p.updatedAt)}</span>
                     </div>
                   </Link>
+                  </div>
                 );
               })}
             </div>
@@ -240,12 +261,13 @@ export default function DashboardPage() {
             </div>
             
             {/* Headers */}
-            <div className="grid grid-cols-[2fr_100px_120px_100px_1.5fr] gap-3 px-2.5 pb-2 border-b-2 border-[var(--border-strong)] text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
+            <div className="grid grid-cols-[2fr_100px_120px_100px_1.5fr_36px] gap-3 px-2.5 pb-2 border-b-2 border-[var(--border-strong)] text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
               <span>Project</span>
               <span>Status</span>
               <span>Stage</span>
               <span>Updated</span>
               <span>URL</span>
+              <span />
             </div>
 
             {/* Rows */}
@@ -258,7 +280,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={p.id}
-                    className="grid grid-cols-[2fr_100px_120px_100px_1.5fr] gap-3 px-2.5 py-3 items-center text-[13px] hover:bg-[var(--fill-muted)] transition-colors"
+                    className="group grid grid-cols-[2fr_100px_120px_100px_1.5fr_36px] gap-3 px-2.5 py-3 items-center text-[13px] hover:bg-[var(--fill-muted)] transition-colors"
                   >
                     <Link
                       href={`/dashboard/${p.id}`}
@@ -287,6 +309,19 @@ export default function DashboardPage() {
                     ) : (
                       <span className="font-mono text-[11px] text-[var(--text-disabled)]">—</span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setDeletingProject(p)}
+                      title="Delete project"
+                      className="hidden group-hover:flex h-6 w-6 items-center justify-center rounded border border-transparent text-[var(--text-disabled)] hover:border-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                      </svg>
+                    </button>
                   </div>
                 );
               })}
@@ -294,6 +329,14 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {deletingProject && (
+        <DeleteProjectModal
+          project={deletingProject}
+          onClose={() => setDeletingProject(null)}
+          onDeleted={() => handleProjectDeleted(deletingProject.id)}
+        />
+      )}
     </div>
   );
 }
