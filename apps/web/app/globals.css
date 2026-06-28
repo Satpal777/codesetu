@@ -663,6 +663,9 @@
   --fill-solid: var(--ink-950);
   --fill-solid-hover: var(--ink-800);
   --fill-muted: var(--ink-100);
+  --bg-raised: var(--white);
+  --bg-inset: var(--ink-50);
+  --text-disabled: var(--ink-300);
 
   --cs-ease: cubic-bezier(0.2, 0, 0, 1);
 
@@ -687,6 +690,9 @@
   --fill-solid: var(--white);
   --fill-solid-hover: var(--ink-150);
   --fill-muted: var(--ink-800);
+  --bg-raised: var(--ink-900);
+  --bg-inset: var(--ink-950);
+  --text-disabled: var(--ink-600);
 }
 
 .cs-landing ::selection {

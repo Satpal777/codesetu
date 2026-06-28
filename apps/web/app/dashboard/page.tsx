@@ -16,36 +16,30 @@ const SUGGESTIONS = [
   "App onboarding flow",
 ];
 
-const TEMPLATES: { icon: string; title: string; prompt: string }[] = [
+const TEMPLATES: { title: string; prompt: string }[] = [
   {
-    icon: "🛍️",
-    title: "Product landing page",
-    prompt: "A modern landing page for my SaaS product with a hero section, features grid, pricing table, and email signup form.",
+    title: "Landing page",
+    prompt: "Build a modern product landing page with a bold hero section, feature highlights grid, social proof, pricing table, and email signup CTA.",
   },
   {
-    icon: "📋",
     title: "Admin dashboard",
-    prompt: "An internal admin dashboard with a sidebar navigation, summary stat cards, a data table with search and filter, and a simple chart.",
+    prompt: "Build an internal admin dashboard with a sidebar navigation, key metric stat cards, a searchable and filterable data table, and a simple bar chart.",
   },
   {
-    icon: "📝",
-    title: "Blog / marketing site",
-    prompt: "A clean marketing site with a blog. Include a hero, feature sections, a blog index page, and individual article layout.",
+    title: "Marketing + blog",
+    prompt: "Build a marketing site with a homepage, feature sections, a blog index listing recent posts with thumbnails, and a single article page template.",
   },
   {
-    icon: "⚡",
     title: "Waitlist page",
-    prompt: "A high-converting waitlist page with a bold headline, short value proposition, email capture form, and social proof counter.",
+    prompt: "Build a high-converting waitlist page with a compelling headline, brief value proposition, an email capture form with validation, and a live signup counter.",
   },
   {
-    icon: "🧾",
     title: "Invoice tool",
-    prompt: "A simple invoice generator tool where I can fill in client name, line items with quantities and prices, and print or download as PDF.",
+    prompt: "Build a browser-based invoice generator where I can add client info and line items with quantities and unit prices, auto-calculate totals, and print or download as PDF.",
   },
   {
-    icon: "📊",
     title: "Portfolio site",
-    prompt: "A personal portfolio site for a designer or developer. Include an about section, project cards with thumbnails, skills list, and contact form.",
+    prompt: "Build a personal portfolio site with an about section, project showcase cards with tags, a skills list, and a contact form at the bottom.",
   },
 ];
 
@@ -136,20 +130,19 @@ export default function DashboardPage() {
         </h1>
 
         {/* Template Gallery */}
-        <div className="mb-8">
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] mb-3">
+        <div className="mb-6">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] mb-2">
             Start from a template
           </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="flex flex-wrap gap-2">
             {TEMPLATES.map((t) => (
               <button
                 key={t.title}
                 type="button"
                 onClick={() => handleTemplateClick(t.prompt)}
-                className="press group flex items-center gap-2.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-raised)] px-3.5 py-3 text-left transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--fill-muted)]"
+                className="press cursor-pointer rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-3.5 py-1 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
               >
-                <span className="text-[18px] leading-none">{t.icon}</span>
-                <span className="text-[12px] font-semibold text-[var(--text-primary)] leading-tight">{t.title}</span>
+                {t.title}
               </button>
             ))}
           </div>
