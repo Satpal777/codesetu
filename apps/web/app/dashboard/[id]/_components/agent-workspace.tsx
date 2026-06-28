@@ -53,6 +53,15 @@ export default function AgentWorkspace({
   const [previewKey, setPreviewKey] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const QUICK_ACTIONS = [
+    "Make it mobile-friendly",
+    "Add a dark mode toggle",
+    "Add a contact form",
+    "Make the colors bolder",
+    "Add smooth scroll animations",
+    "Add a footer with links",
+  ];
+
   const previewUrl = `${BACKEND_URL}/api/projects/${projectId}/preview/`;
 
   // Auto-scroll chat to bottom
@@ -224,6 +233,25 @@ export default function AgentWorkspace({
               </div>
             );
           })}
+          {turns.length === 0 && !busy && (
+            <div className="px-1">
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] mb-2.5">
+                Try asking…
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_ACTIONS.map((action) => (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => void send(action)}
+                    className="press cursor-pointer rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-3 py-1.5 text-[11.5px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
+                  >
+                    {action}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div ref={chatEndRef} />
         </div>
 
