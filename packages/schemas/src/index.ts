@@ -51,6 +51,12 @@ export const ClarificationAnswerSchema = z.object({
 });
 export type ClarificationAnswer = z.infer<typeof ClarificationAnswerSchema>;
 
+export const AgentChatInputSchema = z.object({
+  message: z.string().min(1, "Message cannot be empty").max(5000),
+  modelId: z.string().optional(),
+});
+export type AgentChatInput = z.infer<typeof AgentChatInputSchema>;
+
 export const StageSchema = z.object({
   id: z.string(),
   projectId: z.string(),
