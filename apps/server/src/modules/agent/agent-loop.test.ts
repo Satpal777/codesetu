@@ -20,6 +20,7 @@ function scriptedModel() {
       if (call === 1) {
         return {
           stream: simulateReadableStream({
+            // Provider stream-part literals; cast keeps the mock readable.
             chunks: [
               { type: "stream-start", warnings: [] },
               { type: "tool-input-start", id: "1", toolName: "write_file" },
@@ -30,7 +31,7 @@ function scriptedModel() {
                 input: JSON.stringify({ path: "index.html", content: "<h1>Hello</h1>" }),
               },
               { type: "finish", finishReason: "tool-calls", usage },
-            ],
+            ] as any,
           }),
         };
       }
@@ -42,7 +43,7 @@ function scriptedModel() {
             { type: "text-delta", id: "0", delta: "Done — your homepage is ready." },
             { type: "text-end", id: "0" },
             { type: "finish", finishReason: "stop", usage },
-          ],
+          ] as any,
         }),
       };
     },
