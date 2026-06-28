@@ -83,6 +83,7 @@ export const project = pgTable("project", {
   deploymentUrl: text("deployment_url"),
   repoUrl: text("repo_url"),
   repoBranch: text("repo_branch"),
+  shareToken: text("share_token").unique(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
