@@ -286,6 +286,18 @@ export async function deployProject(id: string): Promise<string> {
   return json.data.url;
 }
 
+/** DELETE /api/projects/:id */
+export async function deleteProject(id: string): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/api/projects/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message || `Couldn't delete project (${res.status}).`);
+  }
+}
+
 /** POST /api/projects/:id/approve */
 export async function approveProject(id: string): Promise<void> {
   const res = await fetch(`${BACKEND_URL}/api/projects/${id}/approve`, {
