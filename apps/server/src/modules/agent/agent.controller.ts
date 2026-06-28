@@ -245,7 +245,7 @@ export const AgentController = {
         return;
       }
 
-      const matchingFile = files.find((f) => f.path === path || f.path.endsWith(path));
+      const matchingFile = files.find((f) => f.path === path);
       if (!matchingFile) {
         res.status(404).type("text/plain").send(`Not found: ${path}`);
         return;
@@ -287,7 +287,7 @@ export const AgentController = {
         return;
       }
 
-      const matchingFile = files.find((f) => f.path === path || f.path.endsWith(path));
+      const matchingFile = files.find((f) => f.path === path);
       if (!matchingFile) {
         res.status(404).type("text/plain").send(`Not found: ${path}`);
         return;
@@ -301,14 +301,22 @@ export const AgentController = {
   },
 };
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function formatPrdMarkdown(prdContent: any): string {
   let md = `# Product Requirements Document (PRD)\n\n`;
   if (!prdContent) return md + "*No PRD available.*";
 
   const data = typeof prdContent === "string" ? JSON.parse(prdContent) : prdContent;
 
-  if (data.title) md += `# ${data.title}\n\n`;
-  if (data.description) md += `## Description\n${data.description}\n\n`;
+  if (data.title) md += `# ${escapeHtml(data.title)}\n\n`;
+  if (data.description) md += `## Description\n${escapeHtml(data.description)}\n\n`;
 
   if (data.targetAudience && Array.isArray(data.targetAudience)) {
     md += `## Target Audience\n`;
@@ -322,7 +330,7 @@ function formatPrdMarkdown(prdContent: any): string {
       if (typeof f === "string") {
         md += `- ${f}\n`;
       } else if (f && typeof f === "object") {
-        md += `- **${f.name || f.title || "Feature"}**: ${f.description || ""}\n`;
+        md += `- **${escapeHtml(f.name || f.title || "Feature")}**: ${f.description || ""}\n`;
       }
     });
     md += `\n`;
@@ -360,8 +368,8 @@ function formatUserProfileMarkdown(thinkingContent: any): string {
 
   const data = typeof thinkingContent === "string" ? JSON.parse(thinkingContent) : thinkingContent;
 
-  if (data.targetUser) md += `## Target User Profile\n${data.targetUser}\n\n`;
-  if (data.coreValue) md += `## Core Value Proposition\n${data.coreValue}\n\n`;
+  if (data.targetUser) md += `## Target User Profile\n${escapeHtml(data.targetUser)}\n\n`;
+  if (data.coreValue) md += `## Core Value Proposition\n${escapeHtml(data.coreValue)}\n\n`;
 
   if (data.userPersonas && Array.isArray(data.userPersonas)) {
     md += `## Detailed User Personas\n`;
@@ -431,7 +439,7 @@ function buildHtmlDocument(title: string, markdown: string): string {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Georgia, Serif;
@@ -505,7 +513,7 @@ function buildHtmlDocument(title: string, markdown: string): string {
   </div>
   <div class="header-card">
     <p style="margin:0; text-transform:uppercase; font-size:10px; letter-spacing:0.1em; color:#666;">Industry Standard SDLC Document</p>
-    <h1 style="margin-top:6px;">${title}</h1>
+    <h1 style="margin-top:6px;">${escapeHtml(title)}</h1>
     <div class="meta-grid">
       <div class="meta-item"><strong>Origin:</strong> CodeSetu Platform</div>
       <div class="meta-item"><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>

@@ -10,7 +10,7 @@ export default function PublicPreviewPage() {
   const previewSrc = `${BACKEND_URL}/api/share/${token}/`;
 
   return (
-    <div className="flex h-screen flex-col bg-[#0a0a0a]">
+    <div className="flex h-screen flex-col bg-black">
       {/* Minimal branding bar */}
       <div className="flex h-10 items-center justify-between border-b border-white/10 px-4">
         <span className="font-mono text-[11px] uppercase tracking-widest text-white/40">

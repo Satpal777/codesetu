@@ -7,9 +7,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "../../_lib/auth-client";
 import AssemblyPanel from "../_components/assembly-panel";
 import AgentWorkspace from "./_components/agent-workspace";
-import ThemeSwitch from "../../_components/theme-switch";
+import ThemeToggle from "../../_components/theme-toggle";
 import {
   getProject,
+  getShareUrl,
   submitClarifications,
   approveProject,
   relativeTime,
@@ -350,7 +351,7 @@ function SimpleProgressView({ activeStageIndex, totalStages, activeStageType }: 
 // ══ 4. Copy Share Button ══
 function CopyShareButton({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
-  const url = `${process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000"}/preview/${token}`;
+  const url = getShareUrl(token);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(url);
@@ -633,7 +634,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </svg>
             Dev
           </button>
-          <ThemeSwitch />
+          <ThemeToggle />
           <span
             className={`cs-badge text-[11px] uppercase tracking-wider font-semibold border ${
               buildDone

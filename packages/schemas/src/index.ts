@@ -104,6 +104,7 @@ export const ProjectResponseSchema = z.object({
   deploymentUrl: z.string().nullable().optional(),
   repoUrl: z.string().nullable().optional(),
   repoBranch: z.string().nullable().optional(),
+  shareToken: z.string().nullable().optional(),
   createdAt: z.date().or(z.string()),
   updatedAt: z.date().or(z.string()),
   stages: z.array(StageSchema).optional(),

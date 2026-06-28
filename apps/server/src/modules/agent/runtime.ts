@@ -125,10 +125,13 @@ export class DaytonaRuntime implements Runtime {
   }
 }
 
+let daytona: DaytonaRuntime | null = null;
+
 /** Get the active runtime depending on environment configuration. */
 export function getRuntime(): Runtime {
   if (process.env.DAYTONA_API_KEY) {
-    return new DaytonaRuntime();
+    if (!daytona) daytona = new DaytonaRuntime();
+    return daytona;
   }
   return localRuntime;
 }
