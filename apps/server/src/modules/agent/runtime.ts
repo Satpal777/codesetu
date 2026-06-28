@@ -135,3 +135,21 @@ export function getRuntime(): Runtime {
   }
   return localRuntime;
 }
+
+/**
+ * Destroys the Daytona sandbox named by projectId.
+ * Errors are swallowed — sandbox may never have been created.
+ */
+export async function destroySandbox(projectId: string): Promise<void> {
+  const client = new Daytona({
+    apiKey: process.env.DAYTONA_API_KEY || "",
+    apiUrl: process.env.DAYTONA_API_URL || "https://api.daytona.io",
+    target: process.env.DAYTONA_TARGET || undefined,
+  });
+  try {
+    const sandbox = await client.get(projectId);
+    await client.delete(sandbox);
+  } catch (err) {
+    console.warn(`[destroySandbox] Could not delete sandbox for project ${projectId}:`, err);
+  }
+}
