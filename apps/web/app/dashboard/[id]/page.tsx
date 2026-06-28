@@ -8,6 +8,7 @@ import { authClient } from "../../_lib/auth-client";
 import ThemeSwitch from "../../_components/theme-switch";
 import AssemblyPanel from "../_components/assembly-panel";
 import PreviewPanel from "../_components/preview-panel";
+import AgentWorkspace from "./_components/agent-workspace";
 import {
   getProject,
   submitClarifications,
@@ -764,131 +765,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </p>
         </motion.div>
 
-        {/* Progress bar */}
-        <div className="mt-6 flex gap-1">
-          {STAGES.map((s, i) => {
-            const dbStage = stages.find((st) => st.type === s.type);
-            const status = (dbStage?.status ?? "pending") as StageStatus;
-            return (
-              <div
-                key={s.type}
-                className="h-1.5 flex-1 rounded-full transition-colors duration-500"
-                style={{ backgroundColor: STATUS_COLOR[status] }}
-                title={s.label}
-              />
-            );
-          })}
+        {/* The conversational agent builder: chat + live preview. */}
+        <div className="mt-8">
+          <AgentWorkspace projectId={project.id} projectTitle={project.title} />
         </div>
-        <p className="mt-2 text-[12px] text-[var(--gray-600)]">
-          {currentStageIndex >= 0
-            ? `Step ${currentStageIndex + 1} of ${STAGES.length}${currentMeta ? ` · ${currentMeta.label}` : ""}`
-            : project.status === "completed"
-            ? "All done"
-            : "Getting started…"}
-        </p>
-
-        {/* Approval banner */}
-        <AnimatePresence>
-          {showApproveButton && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className="mt-6 rounded-2xl border p-5 text-center"
-              style={{ borderColor: "var(--amber-700)", backgroundColor: "color-mix(in srgb, var(--amber-700) 6%, var(--background-100))" }}
-            >
-              <p className="text-[15px] font-semibold" style={{ color: "var(--amber-700)" }}>
-                Ready to go live?
-              </p>
-              <p className="mt-1 text-[13px] text-[var(--gray-700)]">
-                We&apos;ve finished building. Take a look below, then give it the thumbs-up.
-              </p>
-              <button
-                onClick={() => approve()}
-                disabled={approving}
-                className="geist-btn geist-btn-primary mt-4 disabled:opacity-40"
-              >
-                {approving ? "Publishing…" : "Looks good — go live →"}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Studio: the live result (hero, left) beside the pipeline rail (right). */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-          {/* The stage — the app as it comes to life. Sticky on desktop. */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            {generatedFiles.length > 0 ? (
-              <PreviewPanel
-                projectId={project.id}
-                files={generatedFiles}
-                entry={previewEntry}
-                initialDeploymentUrl={project.deploymentUrl}
-              />
-            ) : designSpec && designSpec.sections?.length > 0 ? (
-              <AssemblyPanel spec={designSpec} stages={stages} projectStatus={project.status} />
-            ) : (
-              <StageCanvasPlaceholder />
-            )}
-          </div>
-
-          {/* The rail — the steps, top to bottom. */}
-          <div className="space-y-8">
-            {MOMENTS.map((moment, mi) => (
-              <section key={moment.id} className="animate-rise" style={{ animationDelay: `${mi * 60}ms` }}>
-                <div className="mb-3 flex items-baseline gap-2">
-                  <h2 className="text-[15px] font-semibold text-[var(--gray-1000)]">{moment.label}</h2>
-                  <span className="text-[12px] text-[var(--gray-600)]">{moment.blurb}</span>
-                </div>
-                <div className="space-y-3">
-                  {STAGES.filter((s) => s.moment === moment.id).map((s) => {
-                    const dbStage = stages.find((st) => st.type === s.type) ?? {
-                      id: s.type,
-                      projectId: project.id,
-                      type: s.type,
-                      status: "pending" as StageStatus,
-                      order: 0,
-                    };
-                    const artifact = artifacts.find((a) => a.type === s.type);
-                    const isActive =
-                      dbStage.status === "running" || dbStage.status === "awaiting_input";
-
-                    return (
-                      <StageCard
-                        key={s.type}
-                        stage={dbStage as Stage}
-                        artifact={artifact}
-                        isActive={isActive}
-                        clarifications={s.type === "request" ? clarifications : undefined}
-                        projectId={project.id}
-                        onClarificationsSubmitted={handleClarificationsSubmitted}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        </div>
-
-        {project.status === "completed" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-8 rounded-2xl border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-6 text-center"
-          >
-            <p className="text-lg font-semibold" style={{ color: "var(--green-800)" }}>
-              🎉 Your app is ready
-            </p>
-            <p className="mt-1 text-[13px] text-[var(--gray-700)]">
-              Everything&apos;s built. Open the “Going live” step above to see the summary.
-            </p>
-            <Link href="/dashboard" className="geist-btn geist-btn-secondary mt-4 inline-flex">
-              ← Back to dashboard
-            </Link>
-          </motion.div>
-        )}
       </main>
       )}
     </div>
