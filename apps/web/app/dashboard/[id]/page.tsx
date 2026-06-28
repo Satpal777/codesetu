@@ -347,7 +347,38 @@ function SimpleProgressView({ activeStageIndex, totalStages, activeStageType }: 
   );
 }
 
-// ══ 4. Project Detail Page Controller ══
+// ══ 4. Copy Share Button ══
+function CopyShareButton({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000"}/preview/${token}`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="cs-btn cs-btn-sm cs-btn-outline border-[var(--ink-700)] text-white hover:bg-[var(--ink-800)] gap-1.5"
+    >
+      {copied ? (
+        <>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+          Copied!
+        </>
+      ) : (
+        <>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Share link
+        </>
+      )}
+    </button>
+  );
+}
+
+// ══ 5. Project Detail Page Controller ══
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ?? null;
@@ -649,6 +680,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       Open site →
                     </a>
                   )}
+                  {project.shareToken && (
+                    <CopyShareButton token={project.shareToken} />
+                  )}
                   <Link href="/dashboard" className="cs-btn cs-btn-sm cs-btn-outline border-[var(--ink-700)] text-white hover:bg-[var(--ink-800)]">
                     Back to dashboard
                   </Link>
@@ -658,7 +692,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <div className="flex-1 px-6 pb-10">
               <div className="mx-auto w-full max-w-6xl">
-                <AgentWorkspace projectId={project.id} projectTitle={project.title} />
+                <AgentWorkspace projectId={project.id} projectTitle={project.title} shareToken={project.shareToken} />
               </div>
             </div>
           </div>

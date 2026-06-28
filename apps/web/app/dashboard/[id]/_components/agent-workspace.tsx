@@ -2,6 +2,23 @@
 
 import { useEffect, useState, useRef } from "react";
 
+function AgentShareButton({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000"}/preview/${token}`;
+  return (
+    <button
+      onClick={async () => {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }}
+      className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+    >
+      {copied ? "Copied ✓" : "Share ↗"}
+    </button>
+  );
+}
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
 
 type AgentEvent =
@@ -22,10 +39,12 @@ export default function AgentWorkspace({
   projectId,
   projectTitle,
   modelId,
+  shareToken,
 }: {
   projectId: string;
   projectTitle: string;
   modelId?: string;
+  shareToken?: string | null;
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [plan, setPlan] = useState<string[]>([]);
@@ -255,6 +274,9 @@ export default function AgentWorkspace({
             >
               Open in new tab ↗
             </a>
+            {shareToken && (
+              <AgentShareButton token={shareToken} />
+            )}
             <span className="font-mono text-[10px] text-[var(--text-tertiary)] tracking-wider">PREVIEW</span>
           </div>
         </div>

@@ -118,6 +118,7 @@ export interface Project {
   deploymentUrl?: string | null;
   repoUrl?: string | null;
   repoBranch?: string | null;
+  shareToken: string | null;
   createdAt: string;
   updatedAt: string;
   stages?: Stage[];
@@ -175,7 +176,7 @@ export function stageLabel(type: StageType): string {
 
 /* ----------------------------- Models ------------------------------ */
 
-export type ModelProvider = "openai" | "anthropic" | "google" | "free";
+export type ModelProvider = "openai" | "anthropic" | "google" | "free" | "cloudflare";
 export type ModelTier = "premium" | "fast" | "free";
 
 export interface ModelInfo {
@@ -296,6 +297,11 @@ export async function approveProject(id: string): Promise<void> {
     const body = await res.json().catch(() => null) as { message?: string } | null;
     throw new Error(body?.message || `Couldn't approve project (${res.status}).`);
   }
+}
+
+export function getShareUrl(token: string): string {
+  const base = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+  return `${base}/preview/${token}`;
 }
 
 /** Compact relative time, e.g. "just now", "5m ago", "3d ago". */
