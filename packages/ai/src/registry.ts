@@ -1,6 +1,7 @@
 import type { LanguageModel } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { google } from "@ai-sdk/google";
 import { createOpenRouter, type OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { aiConfig } from "./config.js";
 
@@ -13,6 +14,8 @@ import { aiConfig } from "./config.js";
  * Built lazily so OPENROUTER_API_KEY is read after the server's
  * dotenv.config() has run.
  * ------------------------------------------------------------------ */
+import { availableModels } from "./catalog.js";
+
 let openrouter: OpenRouterProvider | null = null;
 
 function getOpenRouter(): OpenRouterProvider {
@@ -21,21 +24,44 @@ function getOpenRouter(): OpenRouterProvider {
 }
 
 export function resolveModel(modelId: string): LanguageModel {
-  const sep = modelId.indexOf("|");
+  let activeModelId = modelId;
+  const sep = activeModelId.indexOf("|");
   if (sep === -1) {
-    throw new Error(`Invalid model id (expected "provider|model"): ${modelId}`);
+    throw new Error(`Invalid model id (expected "provider|model"): ${activeModelId}`);
   }
-  const provider = modelId.slice(0, sep);
-  const model = modelId.slice(sep + 1);
+  let provider = activeModelId.slice(0, sep);
+  let model = activeModelId.slice(sep + 1);
+
+  // Check if provider is enabled
+  const enabled: Record<string, boolean> = {
+    openai: aiConfig.hasOpenAI(),
+    anthropic: aiConfig.hasAnthropic(),
+    google: aiConfig.hasGoogle(),
+    free: aiConfig.hasOpenRouter(),
+  };
+
+  const isEnabled = enabled[provider] ?? false;
+
+  if (!isEnabled) {
+    const available = availableModels();
+    if (available.length > 0 && available[0]) {
+      activeModelId = available[0].id;
+      const nextSep = activeModelId.indexOf("|");
+      provider = activeModelId.slice(0, nextSep);
+      model = activeModelId.slice(nextSep + 1);
+    }
+  }
 
   switch (provider) {
     case "openai":
       return openai(model);
     case "anthropic":
       return anthropic(model);
+    case "google":
+      return google(model);
     case "free":
       return getOpenRouter().chat(model);
     default:
-      throw new Error(`Unknown provider "${provider}" in model id: ${modelId}`);
+      throw new Error(`Unknown provider "${provider}" in model id: ${activeModelId}`);
   }
 }

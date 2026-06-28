@@ -20,10 +20,11 @@ export interface ModelSelection {
   overrides: Record<string, string>;
 }
 
-const PROVIDER_ORDER: ModelProvider[] = ["anthropic", "openai", "free"];
+const PROVIDER_ORDER: ModelProvider[] = ["anthropic", "openai", "google", "free"];
 const PROVIDER_LABEL: Record<ModelProvider, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
+  google: "Google (Free)",
   free: "Free (OpenRouter)",
 };
 
@@ -113,7 +114,7 @@ export default function ModelPicker({ onChange }: { onChange: (sel: ModelSelecti
   if (config.models.length === 0) {
     return (
       <p className="text-[12px] text-[var(--amber-700)]">
-        No AI providers configured — add an OpenAI, Anthropic, or OpenRouter key.
+        No AI providers configured — add an OpenAI, Anthropic, Google, or OpenRouter key.
       </p>
     );
   }

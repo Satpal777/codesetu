@@ -1,20 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "../../_lib/auth-client";
-import ThemeSwitch from "../../_components/theme-switch";
 import AssemblyPanel from "../_components/assembly-panel";
-import PreviewPanel from "../_components/preview-panel";
 import AgentWorkspace from "./_components/agent-workspace";
+import ThemeSwitch from "../../_components/theme-switch";
 import {
   getProject,
   submitClarifications,
   approveProject,
-  STAGES,
-  MOMENTS,
   relativeTime,
   type Project,
   type Stage,
@@ -23,506 +20,291 @@ import {
   type StageType,
   type StageStatus,
   type LayoutSpec,
-  type GeneratedFile,
 } from "../_lib/projects";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
-const EASE = [0.175, 0.885, 0.32, 1.1] as const;
+const EASE = [0.2, 0, 0, 1] as const;
 
-const STATUS_COLOR: Record<StageStatus, string> = {
-  pending: "var(--gray-400)",
-  running: "var(--blue-700)",
-  awaiting_input: "var(--amber-700)",
-  completed: "var(--green-800)",
-  failed: "var(--red-900)",
+const STAGE_METADATA: Record<StageType, { name: string; desc: string }> = {
+  request: { name: "Idea Formulation", desc: "Capturing and structuring your core app concept" },
+  product_thinking: { name: "User Profiling", desc: "Defining target users, core values, and risks" },
+  prd: { name: "Product Specification", desc: "Writing features, non-goals, and success metrics" },
+  design: { name: "Interface Design", desc: "Planning layout sections and mockup visualization" },
+  tasks: { name: "Task Breakdown", desc: "Deconstructing specs into ordered build checklists" },
+  implementation: { name: "Source Code Generation", desc: "Generating files, structures, and assets" },
+  review: { name: "Quality Assurance", desc: "Scanning code for accessibility, bugs, and edge cases" },
+  fixes: { name: "Polishing & Optimization", desc: "Applying suggestions and refining performance" },
+  approval: { name: "Release Verification", desc: "Final verification and approval to deploy" },
+  release: { name: "Production Deployment", desc: "Packaging, publishing, and going live on Vercel" },
 };
 
-const STATUS_BG: Record<StageStatus, string> = {
-  pending: "var(--background-200)",
-  running: "var(--background-100)",
-  awaiting_input: "var(--background-100)",
-  completed: "var(--background-100)",
-  failed: "var(--background-100)",
+const STAGE_ORDER: StageType[] = [
+  "request",
+  "product_thinking",
+  "prd",
+  "design",
+  "tasks",
+  "implementation",
+  "review",
+  "fixes",
+  "approval",
+  "release",
+];
+
+const STAGE_LOGS: Record<StageType, string[]> = {
+  request: ["Analyzing your project prompt...", "Extracting core design parameters...", "Preparing clarification queries..."],
+  product_thinking: ["Identifying key user personas...", "Analyzing target demographic requirements...", "Mapping core value propositions...", "Evaluating edge-case usage risks..."],
+  prd: ["Drafting product specification documentation...", "Defining system scope & feature list...", "Setting out of scope boundaries...", "Structuring technical architecture..."],
+  design: ["Creating grid layouts...", "Structuring application layout sections...", "Assigning section design components...", "Drafting layout JSON spec..."],
+  tasks: ["Estimating build phases...", "Generating checklist of development items...", "Sequencing coding priorities..."],
+  implementation: ["Spawning Daytona build workspace...", "Generating root files (index.html, styles.css)...", "Writing custom styling sheets...", "Bundling local dependencies..."],
+  review: ["Scanning file accessibility standards...", "Verifying contrast ratio compliance...", "Testing markup semantic syntax...", "Running debug checks..."],
+  fixes: ["Applying style sheet polish...", "Aligning margins and padding...", "Optimizing hover states...", "Running final package build..."],
+  approval: ["Verifying sandbox build output...", "Awaiting deployment approval..."],
+  release: ["Packaging files for cloud build...", "Deploying build assets to Vercel...", "Mapping production domains...", "Activating secure sandboxed preview URL..."],
 };
 
-const STATUS_LABEL: Record<StageStatus, string> = {
-  pending: "Waiting",
-  running: "Running…",
-  awaiting_input: "Needs input",
-  completed: "Done",
-  failed: "Failed",
+const DEFAULT_SPEC: LayoutSpec = {
+  screen: "Landing page",
+  sections: [
+    { type: "navbar", items: ["Home", "Features", "Pricing"], cta: "Join" },
+    { type: "hero", title: "Building your application...", subtitle: "Please wait while CodeSetu generates your custom codebase.", cta: "Build active" },
+    { type: "features", title: "AI Generation Pipeline", items: ["Fast compilation", "Daytona Sandboxing", "Strict Accessibility"] },
+    { type: "cta", title: "Ready to preview?", cta: "Previewing" },
+    { type: "footer", items: ["About", "Contact", "Privacy"] },
+  ],
 };
 
-function StageIcon({ status }: { status: StageStatus }) {
-  if (status === "completed") return <span style={{ color: "var(--green-800)" }}>✓</span>;
-  if (status === "running") return <span className="inline-block animate-spin" style={{ color: "var(--blue-700)" }}>⟳</span>;
-  if (status === "awaiting_input") return <span style={{ color: "var(--amber-700)" }}>●</span>;
-  if (status === "failed") return <span style={{ color: "var(--red-900)" }}>✕</span>;
-  return <span style={{ color: "var(--gray-400)" }}>○</span>;
-}
-
-function FieldLabel({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--gray-600)]">
-      {children}
-    </p>
-  );
-}
-
-function Para({ label, value }: { label: string; value?: unknown }) {
-  if (typeof value !== "string" || value.trim().length === 0) return null;
-  return (
-    <div>
-      <FieldLabel>{label}</FieldLabel>
-      <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--gray-1000)]">{value}</p>
-    </div>
-  );
-}
-
-function BulletList({ label, items }: { label: string; items?: unknown }) {
-  const strings = Array.isArray(items) ? (items.filter((i) => typeof i === "string") as string[]) : [];
-  if (strings.length === 0) return null;
-  return (
-    <div>
-      <FieldLabel>{label}</FieldLabel>
-      <ul className="mt-1.5 space-y-1">
-        {strings.map((s, i) => (
-          <li key={i} className="flex gap-2 text-[13px] leading-relaxed text-[var(--gray-1000)]">
-            <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[var(--gray-500)]" />
-            <span>{s}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function NamedList({ label, items }: { label: string; items?: unknown }) {
-  const rows = Array.isArray(items)
-    ? (items.filter((i) => i && typeof i === "object") as Array<Record<string, unknown>>)
-    : [];
-  if (rows.length === 0) return null;
-  return (
-    <div>
-      <FieldLabel>{label}</FieldLabel>
-      <div className="mt-2 space-y-2">
-        {rows.map((r, i) => (
-          <div key={i} className="rounded-lg border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[13px] font-medium text-[var(--gray-1000)]">
-                {String(r.name ?? r.title ?? `Item ${i + 1}`)}
-              </p>
-              {typeof r.priority === "string" && (
-                <span className="shrink-0 rounded-full bg-[var(--background-200)] px-2 py-0.5 text-[11px] text-[var(--gray-700)]">
-                  {r.priority}
-                </span>
-              )}
-            </div>
-            {typeof r.description === "string" && (
-              <p className="mt-1 text-[12px] leading-relaxed text-[var(--gray-700)]">{r.description}</p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TechnicalDetails({ content }: { content: unknown }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="text-[11px] font-medium text-[var(--gray-600)] hover:text-[var(--gray-1000)]"
-      >
-        {open ? "Hide technical details" : "Show technical details"}
-      </button>
-      {open && (
-        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-3 text-[11px] leading-relaxed text-[var(--gray-900)]">
-          {JSON.stringify(content, null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}
-
-function StageCanvasPlaceholder() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--gray-alpha-200)] bg-[var(--background-100)]">
-      <div className="relative flex min-h-[340px] flex-col items-center justify-center px-6 py-16 text-center">
-        <div aria-hidden className="hero-glow pointer-events-none absolute inset-0" />
-        <div
-          aria-hidden
-          className="dot-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_50%,black,transparent)]"
-        />
-        <div className="relative">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-200)]">
-            <span className="text-lg">✦</span>
-          </div>
-          <p className="mt-4 text-[14px] font-medium text-[var(--gray-1000)]">Your app takes shape here</p>
-          <p className="mx-auto mt-1 max-w-xs text-[12px] leading-relaxed text-[var(--gray-600)]">
-            Answer the questions and we&apos;ll design it, build it, and show it running — right here.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ArtifactViewer({ artifact }: { artifact: Artifact }) {
-  const c = (artifact.content ?? {}) as Record<string, unknown>;
-  const wrap = (children: ReactNode) => (
-    <div className="mt-3 space-y-3 rounded-xl border border-[var(--gray-alpha-200)] bg-[var(--background-200)] p-4">
-      {children}
-    </div>
-  );
-
-  switch (artifact.type) {
-    case "product_thinking":
-      return wrap(
-        <>
-          <Para label="In short" value={c.summary} />
-          <Para label="The core value" value={c.coreValue} />
-          <BulletList label="Who it's for" items={c.targetUsers} />
-          <BulletList label="Things to watch" items={c.risks} />
-        </>
-      );
-    case "prd":
-      return wrap(
-        <>
-          <Para label="Overview" value={c.overview} />
-          <NamedList label="What's included" items={c.features} />
-          <BulletList label="Not doing (on purpose)" items={c.nonGoals} />
-          <BulletList label="How we'll know it works" items={c.successMetrics} />
-        </>
-      );
-    case "design": {
-      const spec = (c.spec ?? {}) as { screen?: string };
-      const svg = typeof c.imageSvg === "string" ? c.imageSvg : null;
-      return wrap(
-        <>
-          {spec.screen && <Para label="Screen" value={spec.screen} />}
-          {svg ? (
-            <div>
-              <FieldLabel>Preview</FieldLabel>
-              <div
-                className="mt-2 overflow-hidden rounded-lg border border-[var(--gray-alpha-200)] bg-white"
-                dangerouslySetInnerHTML={{ __html: svg }}
-              />
-              <p className="mt-1.5 text-[11px] text-[var(--gray-600)]">
-                A preview of the layout. The real screens are built next.
-              </p>
-            </div>
-          ) : (
-            <TechnicalDetails content={c} />
-          )}
-        </>
-      );
-    }
-    case "tasks":
-      return wrap(<NamedList label="The build checklist" items={c.tasks} />);
-    case "implementation": {
-      const files = Array.isArray(c.files) ? (c.files as Array<{ path?: unknown }>) : [];
-      if (files.length === 0) return wrap(<Para label="How we'll build it" value={c.outline} />);
-      return wrap(
-        <div>
-          <FieldLabel>Files written</FieldLabel>
-          <ul className="mt-1.5 space-y-1">
-            {files.map((f, i) => (
-              <li key={i} className="font-mono text-[12px] text-[var(--gray-900)]">
-                {typeof f.path === "string" ? f.path : `file ${i + 1}`}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[11px] text-[var(--gray-600)]">See the live preview below.</p>
-        </div>
-      );
-    }
-    case "review":
-      return wrap(
-        <>
-          <BulletList label="What we found" items={c.findings} />
-          <BulletList label="Suggestions" items={c.suggestions} />
-          <Para label="Risk level" value={c.riskLevel} />
-        </>
-      );
-    case "fixes":
-      return wrap(
-        <>
-          <Para label="In short" value={c.summary} />
-          <BulletList label="What we improved" items={c.appliedFixes} />
-        </>
-      );
-    case "release":
-      return wrap(<Para label="Summary" value={c.summary} />);
-    case "approval":
-      return wrap(
-        <p className="text-[13px] text-[var(--gray-700)]">Approved — thanks. Off we go.</p>
-      );
-    default:
-      return wrap(<TechnicalDetails content={c} />);
-  }
-}
-
-interface ClarificationsFormProps {
+// ══ 1. Conversational Chat-Based Onboarding ══
+interface ConversationalClarificationsProps {
   clarifications: Clarification[];
   projectId: string;
   onSubmitted: () => void;
 }
 
-function ClarificationsForm({ clarifications, projectId, onSubmitted }: ClarificationsFormProps) {
-  // Chosen option labels per question.
+function ConversationalClarifications({
+  clarifications,
+  projectId,
+  onSubmitted,
+}: ConversationalClarificationsProps) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [history, setHistory] = useState<{ role: "bot" | "user"; text: string }[]>([]);
   const [picks, setPicks] = useState<Record<string, string[]>>({});
-  // Whether the "Something else" free-text box is active per question.
-  const [customOn, setCustomOn] = useState<Record<string, boolean>>({});
-  const [customText, setCustomText] = useState<Record<string, string>>({});
+  const [customText, setCustomText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const answerFor = (c: Clarification): string => {
-    const picked = picks[c.id] ?? [];
-    const noOptions = (c.options?.length ?? 0) === 0;
-    const customActive = noOptions || (customOn[c.id] ?? false);
-    const custom = customActive ? (customText[c.id] ?? "").trim() : "";
-    if (c.multiSelect) return [...picked, custom].filter(Boolean).join(", ");
-    return custom || picked[0] || "";
+  const activeQuestion = clarifications[currentIdx];
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history]);
+
+  // Load first question
+  useEffect(() => {
+    if (clarifications.length > 0 && history.length === 0) {
+      setHistory([{ role: "bot", text: clarifications[0]?.question ?? "" }]);
+    }
+  }, [clarifications, history.length]);
+
+  const handleSelectOption = async (option: string) => {
+    if (submitting) return;
+
+    const q = clarifications[currentIdx];
+    if (!q) return;
+    const newPicks = { ...picks, [q.id]: [option] };
+    setPicks(newPicks);
+
+    const updatedHistory = [...history, { role: "user" as const, text: option }];
+    setHistory(updatedHistory);
+
+    if (currentIdx + 1 < clarifications.length) {
+      const nextQ = clarifications[currentIdx + 1];
+      if (!nextQ) return;
+      setCurrentIdx((prev) => prev + 1);
+      setHistory([...updatedHistory, { role: "bot" as const, text: nextQ.question }]);
+    } else {
+      await submitAll(newPicks);
+    }
   };
 
-  const allAnswered = clarifications.every((c) => answerFor(c).length > 0);
+  const handleCustomSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customText.trim() || submitting) return;
 
-  const toggleOption = (c: Clarification, option: string) => {
-    setPicks((prev) => {
-      const current = prev[c.id] ?? [];
-      if (c.multiSelect) {
-        const next = current.includes(option)
-          ? current.filter((o) => o !== option)
-          : [...current, option];
-        return { ...prev, [c.id]: next };
-      }
-      return { ...prev, [c.id]: [option] };
-    });
-    // Picking a concrete option closes the free-text box on single-select.
-    if (!c.multiSelect) setCustomOn((prev) => ({ ...prev, [c.id]: false }));
+    const answer = customText.trim();
+    setCustomText("");
+
+    const q = clarifications[currentIdx];
+    if (!q) return;
+    const newPicks = { ...picks, [q.id]: [answer] };
+    setPicks(newPicks);
+
+    const updatedHistory = [...history, { role: "user" as const, text: answer }];
+    setHistory(updatedHistory);
+
+    if (currentIdx + 1 < clarifications.length) {
+      const nextQ = clarifications[currentIdx + 1];
+      if (!nextQ) return;
+      setCurrentIdx((prev) => prev + 1);
+      setHistory([...updatedHistory, { role: "bot" as const, text: nextQ.question }]);
+    } else {
+      await submitAll(newPicks);
+    }
   };
 
-  const toggleCustom = (c: Clarification) => {
-    setCustomOn((prev) => ({ ...prev, [c.id]: !prev[c.id] }));
-    if (!c.multiSelect) setPicks((prev) => ({ ...prev, [c.id]: [] }));
-  };
-
-  const handleSubmit = async () => {
-    if (!allAnswered || submitting) return;
+  const submitAll = async (allPicks: Record<string, string[]>) => {
     setSubmitting(true);
     setError(null);
     try {
-      await submitClarifications(
-        projectId,
-        clarifications.map((c) => ({ id: c.id, answer: answerFor(c) }))
-      );
+      const answers = clarifications.map((c) => ({
+        id: c.id,
+        answer: (allPicks[c.id] ?? []).join(", "),
+      }));
+      await submitClarifications(projectId, answers);
       onSubmitted();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mt-4 rounded-2xl border bg-[var(--background-100)] p-5"
-      style={{ borderColor: "var(--amber-700)" }}
-    >
-      <p className="text-[13px] font-semibold text-[var(--amber-700)]">
-        A couple of quick questions
-      </p>
-      <p className="mt-1 text-[12px] text-[var(--gray-700)]">
-        Tap the answers that fit. There&apos;s no wrong choice — it just helps us build what you have in mind.
-      </p>
+    <div className="flex flex-col h-[calc(100vh-8rem)] rounded border border-[var(--border-default)] bg-[var(--bg-raised)] shadow-sm overflow-hidden max-w-xl mx-auto w-full">
+      {/* Header */}
+      <div className="border-b border-[var(--border-subtle)] px-5 py-3 bg-[var(--bg-raised)]">
+        <p className="font-mono text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] mb-0.5">
+          Step 1 of 2 · Chat Onboarding
+        </p>
+        <h3 className="text-[14px] font-bold text-[var(--text-primary)]">
+          Shaping your application
+        </h3>
+      </div>
 
-      <div className="mt-4 space-y-5">
-        {clarifications.map((c, i) => {
-          const picked = picks[c.id] ?? [];
-          const options = c.options ?? [];
-          const noOptions = options.length === 0;
-          const allowCustom = c.allowCustom !== false;
-          const customActive = noOptions || (customOn[c.id] ?? false);
+      {/* Chat Window */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+        {history.map((msg, i) => {
+          const isUser = msg.role === "user";
           return (
-            <div key={c.id}>
-              <p className="text-[13px] font-medium text-[var(--gray-1000)]">
-                {i + 1}. {c.question}
-                {c.multiSelect && (
-                  <span className="ml-2 text-[11px] font-normal text-[var(--gray-600)]">
-                    Pick any that apply
+            <div
+              key={i}
+              className={`flex gap-2.5 w-full animate-[msgIn_0.2s_ease] ${
+                isUser ? "justify-end" : "justify-start"
+              }`}
+            >
+              {!isUser && (
+                <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[3px] bg-[var(--ink-950)] text-white">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                    <path d="M3 16 Q12 4 21 16" />
+                    <line x1="12" y1="9" x2="12" y2="20" />
+                  </svg>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1 max-w-[80%]">
+                {!isUser && (
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">
+                    CodeSetu
                   </span>
                 )}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {options.map((opt) => {
-                  const active = picked.includes(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => toggleOption(c, opt)}
-                      aria-pressed={active}
-                      className={`press rounded-full border px-3 py-1.5 text-[13px] ${
-                        active
-                          ? "border-[var(--gray-1000)] bg-[var(--gray-1000)] font-medium text-[var(--background-100)]"
-                          : "border-[var(--gray-alpha-300)] bg-[var(--background-100)] text-[var(--gray-1000)] hover:bg-[var(--background-200)]"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-                {allowCustom && !noOptions && (
-                  <button
-                    type="button"
-                    onClick={() => toggleCustom(c)}
-                    aria-pressed={customActive}
-                    className={`press rounded-full border px-3 py-1.5 text-[13px] ${
-                      customActive
-                        ? "border-[var(--gray-1000)] bg-[var(--gray-1000)] font-medium text-[var(--background-100)]"
-                        : "border-dashed border-[var(--gray-alpha-400)] bg-[var(--background-100)] text-[var(--gray-700)] hover:text-[var(--gray-1000)]"
-                    }`}
-                  >
-                    Something else →
-                  </button>
-                )}
+                <div
+                  className={`text-[13px] leading-relaxed ${
+                    isUser
+                      ? "rounded-[12px_12px_2px_12px] bg-[var(--fill-muted)] px-3.5 py-2 text-[var(--text-primary)]"
+                      : "text-[var(--text-primary)]"
+                  }`}
+                >
+                  {msg.text}
+                </div>
               </div>
-              {customActive && (
-                <input
-                  autoFocus={!noOptions}
-                  value={customText[c.id] ?? ""}
-                  onChange={(e) =>
-                    setCustomText((prev) => ({ ...prev, [c.id]: e.target.value }))
-                  }
-                  placeholder="Type your answer…"
-                  className="mt-2 w-full rounded-lg border border-[var(--gray-alpha-300)] bg-[var(--field-background)] px-3 py-2 text-[13px] text-[var(--gray-1000)] placeholder:text-[var(--gray-600)] focus:border-[var(--gray-1000)] focus:outline-none"
-                />
-              )}
             </div>
           );
         })}
+        <div ref={chatEndRef} />
       </div>
 
-      {error && <p className="mt-3 text-[12px] text-[var(--red-900)]">{error}</p>}
+      {/* Actions & Custom Suggestion Inputs */}
+      {activeQuestion && (
+        <div className="border-t border-[var(--border-subtle)] p-3 bg-[var(--bg-inset)]">
+          {/* Options grid */}
+          {activeQuestion.options && activeQuestion.options.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {activeQuestion.options.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => void handleSelectOption(opt)}
+                  disabled={submitting}
+                  className="press cursor-pointer rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-3.5 py-1.5 text-[12px] font-medium text-[var(--text-primary)] hover:border-[var(--border-strong)] hover:bg-[var(--fill-muted)] disabled:opacity-40"
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
 
-      <div className="mt-5 flex justify-end">
-        <button
-          onClick={() => void handleSubmit()}
-          disabled={!allAnswered || submitting}
-          className="geist-btn geist-btn-primary disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {submitting ? "Sending…" : "Continue →"}
-        </button>
-      </div>
-    </motion.div>
+          {/* Suggestion input field (last option as input) */}
+          {activeQuestion.allowCustom !== false && (
+            <form onSubmit={handleCustomSubmit} className="flex gap-2 items-center">
+              <input
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                disabled={submitting}
+                placeholder="Type a custom suggestion or answer..."
+                className="flex-1 rounded border border-[var(--border-default)] bg-[var(--bg-raised)] px-3 py-1.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[var(--border-strong)] focus:outline-none disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={submitting || !customText.trim()}
+                className="cs-btn cs-btn-sm cs-btn-solid font-semibold disabled:opacity-40 shrink-0"
+              >
+                {submitting ? "..." : "Send"}
+              </button>
+            </form>
+          )}
+
+          {error && <p className="mt-2 text-[11px] text-red-600">{error}</p>}
+        </div>
+      )}
+    </div>
   );
 }
 
-interface StageCardProps {
-  stage: Stage;
-  artifact?: Artifact;
-  isActive: boolean;
-  clarifications?: Clarification[];
-  projectId: string;
-  onClarificationsSubmitted: () => void;
-}
-
-function StageCard({ stage, artifact, isActive, clarifications, projectId, onClarificationsSubmitted }: StageCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const meta = STAGES.find((s) => s.type === stage.type);
-  const status = stage.status as StageStatus;
-  const color = STATUS_COLOR[status];
+// ══ 2. Stage Logging Console (See what's going on) ══
+function StageLogVisualizer({ activeStage }: { activeStage: StageType }) {
+  const [logIndex, setLogIndex] = useState(0);
+  const logs = STAGE_LOGS[activeStage] || ["Working on stage task..."];
 
   useEffect(() => {
-    if (status === "running" || status === "awaiting_input" || status === "completed") {
-      setExpanded(true);
-    }
-  }, [status]);
-
-  const showClarifications =
-    stage.type === "request" && status === "awaiting_input" && clarifications && clarifications.length > 0;
+    setLogIndex(0);
+    const interval = setInterval(() => {
+      setLogIndex((i) => (i + 1) % logs.length);
+    }, 2200);
+    return () => clearInterval(interval);
+  }, [activeStage]);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, ease: EASE }}
-      className="rounded-xl border bg-[var(--background-100)] overflow-hidden"
-      style={{
-        borderColor: isActive ? color : "var(--gray-alpha-200)",
-        backgroundColor: STATUS_BG[status],
-      }}
-    >
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-3 p-4 text-left"
-      >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[13px] font-bold">
-          <StageIcon status={status} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-semibold text-[var(--gray-1000)] truncate">
-              {meta?.label ?? stage.type}
-            </span>
-            <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
-              style={{ color, backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)` }}
-            >
-              {STATUS_LABEL[status]}
-            </span>
-          </div>
-          <p className="mt-0.5 text-[12px] text-[var(--gray-600)]">{meta?.description}</p>
-        </div>
-        {(artifact || showClarifications) && (
-          <span className="shrink-0 text-[12px] text-[var(--gray-600)]">
-            {expanded ? "▲" : "▼"}
-          </span>
-        )}
-        {status === "running" && (
-          <span className="shrink-0">
-            <span className="flex h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-          </span>
-        )}
-      </button>
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="content"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4">
-              {showClarifications && (
-                <ClarificationsForm
-                  clarifications={clarifications!}
-                  projectId={projectId}
-                  onSubmitted={onClarificationsSubmitted}
-                />
-              )}
-              {artifact && <ArtifactViewer artifact={artifact} />}
-              {stage.error && (
-                <p className="mt-3 text-[12px] text-[var(--red-900)]">Error: {stage.error}</p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+    <div className="flex flex-col gap-3 font-mono text-[12px] text-[var(--text-secondary)]">
+      <div className="flex items-center gap-2">
+        <svg className="animate-spin h-3.5 w-3.5 text-[var(--text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <circle className="opacity-25" cx="12" cy="12" r="10" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <span className="font-semibold text-[var(--text-primary)]">{logs[logIndex]}</span>
+      </div>
+      <div className="mt-3 border-t border-[var(--border-subtle)] pt-3.5 space-y-1 text-[11px] text-[var(--text-tertiary)]">
+        <div>&gt; task_runner_init: {activeStage}</div>
+        <div>&gt; env_sandbox: daytona_container_host</div>
+        <div>&gt; container_status: compiling</div>
+        <div>&gt; trace_log: pipeline step active...</div>
+      </div>
+    </div>
   );
 }
 
+// ══ 3. Project Detail Page Controller ══
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ?? null;
@@ -531,12 +313,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [projectId, setProjectId] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
-  // Unwrap Next.js 16 async params
+  // Unwrap Next.js async params
   useEffect(() => {
     void params.then((p) => setProjectId(p.id));
   }, [params]);
 
-  // Project data — SSE keeps this fresh; staleTime:0 means every invalidation re-fetches
+  // Project detail query
   const {
     data: project,
     isLoading,
@@ -549,12 +331,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     staleTime: 0,
   });
 
-  // Derive sub-collections from the single query result
   const stages = project?.stages ?? [];
   const artifacts = project?.artifacts ?? [];
   const clarifications = project?.clarifications ?? [];
 
-  // Approve mutation
+  // Approve project mutation (moves to deploy)
   const { mutate: approve, isPending: approving } = useMutation({
     mutationFn: () => approveProject(projectId!),
     onError: (err) => console.error(err),
@@ -562,7 +343,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       void queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
   });
 
-  // SSE for live stage updates — keeps optimistic state in query cache
+  // SSE handler for project updates
   useEffect(() => {
     if (!projectId || !user) return;
 
@@ -579,7 +360,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           artifact?: unknown;
         };
 
-        // Optimistic update in the cache — keeps UI responsive before the DB re-fetch
         queryClient.setQueryData<Project>(["project", projectId], (prev) => {
           if (!prev) return prev;
 
@@ -614,17 +394,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           };
         });
 
-        // Full re-fetch when a stage completes to pick up new artifacts from DB
         if (update.status === "completed" || update.status === "awaiting_input") {
           void queryClient.invalidateQueries({ queryKey: ["project", projectId] });
         }
       } catch {
-        // ignore parse errors
+        // ignore errors
       }
-    };
-
-    es.onerror = () => {
-      // EventSource auto-reconnects; no action needed
     };
 
     return () => {
@@ -637,140 +412,385 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     void queryClient.invalidateQueries({ queryKey: ["project", projectId] });
   };
 
-  const approvalStage = stages.find((s) => s.type === "approval");
-  const showApproveButton = approvalStage?.status === "awaiting_input";
-
-  const currentStageIndex = stages.findIndex(
-    (s) => s.status === "running" || s.status === "awaiting_input"
-  );
-  const currentMeta =
-    currentStageIndex >= 0
-      ? STAGES.find((s) => s.type === stages[currentStageIndex]?.type)
-      : undefined;
-
-  const designSpec = (
-    artifacts.find((a) => a.type === "design")?.content as { spec?: LayoutSpec } | undefined
-  )?.spec;
-
-  const implContent = artifacts.find((a) => a.type === "implementation")?.content as
-    | { entry?: string; files?: GeneratedFile[] }
-    | undefined;
-  const generatedFiles = implContent?.files ?? [];
-  const previewEntry = implContent?.entry ?? "index.html";
-
-  // Only block the full page on the very first session+project load.
-  // Background session refetches must NOT unmount ThemeSwitch.
   const isInitialSessionLoad = loadingUser && !user;
   const isProjectLoading = !loadingUser && user && isLoading;
   const isNotLoggedIn = !loadingUser && !user;
   const hasError = !loadingUser && user && !isLoading && (isError || !project);
   const showProject = !loadingUser && !!user && !isLoading && !isError && !!project;
 
-  return (
-    <div className={`min-h-screen ${showProject ? "bg-[var(--background-200)]" : "bg-[var(--background-100)]"} text-[var(--gray-1000)]`}>
+  // Stages & Gates status
+  const requestStage = stages.find((s) => s.type === "request");
+  const showClarifications =
+    requestStage?.status === "awaiting_input" && clarifications && clarifications.length > 0;
 
-      {/* ─── Persistent header — ThemeSwitch lives here and never remounts ─── */}
-      <header className="sticky top-0 z-40 border-b border-[var(--gray-alpha-400)] bg-[var(--header-background)] backdrop-blur-md">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-6">
-          <Link href="/dashboard" className="text-[13px] text-[var(--gray-700)] hover:text-[var(--gray-1000)]">
-            ← Dashboard
-          </Link>
-          {project && (
-            <>
-              <span className="text-[var(--gray-400)]">/</span>
-              <span className="truncate text-[14px] font-semibold text-[var(--gray-1000)]">
-                {project.title}
-              </span>
-            </>
-          )}
-          <div className="ml-auto flex items-center gap-3">
-            <ThemeSwitch />
-            {project && (
-              <span
-                className="rounded-full border border-[var(--gray-alpha-300)] px-2.5 py-1 text-[12px] font-medium"
-                style={{ color: STATUS_COLOR[project.status as StageStatus] }}
-              >
-                {STATUS_LABEL[project.status as StageStatus] ?? project.status}
-              </span>
-            )}
-          </div>
-        </nav>
-      </header>
+  const approvalStage = stages.find((s) => s.type === "approval");
+  const showDeployGate = approvalStage?.status === "awaiting_input";
 
-      {/* ─── Loading: session not yet known → full-page spinner ─── */}
-      {isInitialSessionLoad && (
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--gray-200)] border-t-[var(--gray-1000)]" />
+  const buildDone = project?.status === "completed";
+  const activeStageType = project?.currentStage ?? "request";
+  const activeStageIndex = STAGE_ORDER.indexOf(activeStageType);
+
+  // Load layout design spec if available
+  const designArtifact = artifacts.find((a) => a.type === "design");
+  let layoutSpec: LayoutSpec = DEFAULT_SPEC;
+  if (designArtifact) {
+    try {
+      const parsed = typeof designArtifact.content === "string"
+        ? JSON.parse(designArtifact.content)
+        : designArtifact.content;
+      if (parsed && typeof parsed === "object" && "sections" in parsed) {
+        layoutSpec = parsed as LayoutSpec;
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  // Active artifact content for visualization
+  const activeArtifact = artifacts.find((a) => a.type === activeStageType);
+
+  if (isInitialSessionLoad) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--paper)]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--ink-200)] border-t-[var(--ink-950)]" />
+      </div>
+    );
+  }
+
+  if (isProjectLoading) {
+    return (
+      <main className="mx-auto max-w-[580px] px-6 py-14">
+        <div className="h-3 w-32 animate-pulse rounded bg-[var(--bg-inset)] mb-4" />
+        <div className="h-7 w-56 animate-pulse rounded bg-[var(--bg-inset)] mb-10" />
+        <div className="space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex gap-4 items-center h-12">
+              <div className="h-8 w-8 rounded animate-pulse bg-[var(--bg-inset)] shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-28 animate-pulse rounded bg-[var(--bg-inset)]" />
+                <div className="h-3 w-48 animate-pulse rounded bg-[var(--bg-inset)]" />
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </main>
+    );
+  }
 
-      {/* ─── Loading: user known but project data not yet arrived → skeleton ─── */}
-      {isProjectLoading && (
-        <main className="mx-auto max-w-4xl px-6 py-10">
-          <div className="h-6 w-48 animate-pulse rounded-lg bg-[var(--gray-100)]" />
-          <div className="mt-2 h-4 w-72 animate-pulse rounded bg-[var(--gray-100)]" />
-          <div className="mt-6 flex gap-1">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="h-1.5 flex-1 animate-pulse rounded-full bg-[var(--gray-100)]" />
-            ))}
+  if (isNotLoggedIn) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <p className="text-[14px] text-[var(--text-secondary)]">Please sign in to view this project.</p>
+      </div>
+    );
+  }
+
+  if (hasError || !project) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+        <p className="text-[14px] font-semibold text-[var(--text-primary)]">Project not found</p>
+        <p className="text-[12px] text-[var(--text-secondary)]">
+          {error instanceof Error ? error.message : "Something went wrong."}
+        </p>
+        <Link href="/dashboard" className="cs-btn cs-btn-sm cs-btn-outline">
+          ← Back to dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  // Active status header details
+  const buildStatusLine = buildDone
+    ? `${project.title.toLowerCase().replace(/[^a-z0-9-]/g, "") || "project"}.codesetu.app`
+    : `Stage ${Math.min(activeStageIndex + 1, STAGE_ORDER.length)} of ${STAGE_ORDER.length} · ${
+        STAGE_METADATA[activeStageType]?.name ?? activeStageType
+      }`;
+
+  const buildBadgeLabel = buildDone ? "Live" : showDeployGate ? "Review" : "Building";
+
+  return (
+    <div className="flex flex-col min-h-full bg-[var(--bg-base)]">
+      {/* Header bar */}
+      <div className="flex h-14 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-raised)] px-6">
+        <div className="flex items-center gap-3.5">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 font-sans text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M19 12H5" />
+              <path d="m12 5-7 7 7 7" />
+            </svg>
+            Dashboard
+          </Link>
+          <div className="h-3.5 w-[1px] bg-[var(--border-default)]" />
+          <div className="min-w-0">
+            <div className="truncate text-[14px] font-semibold text-[var(--text-primary)]">{project.title}</div>
+            <div className="font-mono text-[10px] tracking-wide text-[var(--text-tertiary)] mt-0.5">{buildStatusLine}</div>
           </div>
-          <div className="mt-8 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-[var(--gray-alpha-200)] bg-[var(--background-100)] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-5 w-5 animate-pulse rounded-full bg-[var(--gray-100)]" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3.5 w-32 animate-pulse rounded bg-[var(--gray-100)]" />
-                    <div className="h-3 w-48 animate-pulse rounded bg-[var(--gray-100)]" />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <ThemeSwitch />
+          <span
+            className={`cs-badge text-[11px] uppercase tracking-wider font-semibold border ${
+              buildDone
+                ? "border-[var(--border-strong)] bg-[var(--ink-950)] text-white font-bold"
+                : "border-[var(--border-default)] text-[var(--text-secondary)]"
+            }`}
+          >
+            <span className={`cs-badge-dot ${buildDone ? "bg-green-500" : "bg-[var(--ink-400)] animate-pulse"}`} />
+            {buildBadgeLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1">
+        {buildDone ? (
+          /* ══ Completed View: Paid payoff and Live Sandboxed preview ══ */
+          <div className="flex flex-col h-full">
+            <div className="mx-auto w-full max-w-6xl px-6 pt-8 pb-4">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: EASE }}
+                className="rounded border border-[var(--border-strong)] bg-[var(--surface-invert)] p-6 shadow-md text-white"
+              >
+                <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--ink-300)] mb-2">
+                  ↗ Live in Daytona Sandbox
+                </div>
+                <h2 className="cs-display text-[26px] tracking-tight leading-none mb-1 text-white">
+                  {project.title} is live.
+                </h2>
+                {project.deploymentUrl && (
+                  <p className="font-mono text-[12px] text-[var(--ink-200)] mb-5">
+                    {project.deploymentUrl.replace(/^https?:\/\//, "")}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  {project.deploymentUrl && (
+                    <a
+                      href={project.deploymentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="cs-btn cs-btn-sm cs-btn-solid bg-white text-[var(--ink-950)] border-white hover:bg-[var(--ink-100)] font-semibold"
+                    >
+                      Open site →
+                    </a>
+                  )}
+                  <Link href="/dashboard" className="cs-btn cs-btn-sm cs-btn-outline border-[var(--ink-700)] text-white hover:bg-[var(--ink-800)]">
+                    Back to dashboard
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="flex-1 px-6 pb-10">
+              <div className="mx-auto w-full max-w-6xl">
+                <AgentWorkspace projectId={project.id} projectTitle={project.title} />
+              </div>
+            </div>
+          </div>
+        ) : showClarifications ? (
+          /* ══ Onboarding: Conversational Chat-based questions ══ */
+          <div className="px-6 py-14">
+            <ConversationalClarifications
+              clarifications={clarifications}
+              projectId={project.id}
+              onSubmitted={handleClarificationsSubmitted}
+            />
+          </div>
+        ) : (
+          /* ══ Active Build: 2-Column visualizer ("See what is going on") ══ */
+          <div className="mx-auto w-full max-w-6xl px-6 py-10">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2.2fr] gap-8 items-start">
+              
+              {/* Left column: Stages checklist */}
+              <div className="rounded border border-[var(--border-default)] bg-[var(--bg-raised)] p-5 shadow-sm">
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)] mb-5">
+                  Stages Checklist
+                </div>
+
+                <div className="flex flex-col">
+                  {STAGE_ORDER.map((type, i) => {
+                    const stage = stages.find((s) => s.type === type);
+                    const metadata = STAGE_METADATA[type];
+
+                    const done = (stage && stage.status === "completed") || i < activeStageIndex;
+                    const running = i === activeStageIndex && stage?.status === "running";
+                    const gate = i === activeStageIndex && stage?.status === "awaiting_input";
+                    const pending = !done && !running && !gate;
+
+                    let indText = "";
+                    let indClass = "";
+
+                    if (done) {
+                      indText = "✓";
+                      indClass = "bg-[var(--ink-950)] border-[var(--ink-950)] text-white font-bold rounded";
+                    } else if (running) {
+                      indClass = "border-t-[var(--ink-950)] border-r-[var(--border-default)] border-b-[var(--border-default)] border-l-[var(--border-default)] animate-spin rounded-full";
+                    } else {
+                      indText = String(i + 1).padStart(2, "0");
+                      indClass = `font-mono text-[10px] font-semibold border rounded ${
+                        gate ? "border-[var(--border-strong)] text-[var(--text-primary)] animate-pulse" : "border-[var(--border-default)] text-[var(--text-disabled)]"
+                      }`;
+                    }
+
+                    return (
+                      <div key={type} className="flex flex-col">
+                        <div
+                          className={`flex items-center gap-3 py-3 border-b border-[var(--border-subtle)] transition-opacity duration-300 ${
+                            pending ? "opacity-35" : "opacity-100"
+                          }`}
+                        >
+                          <div className={`flex h-7 w-7 items-center justify-center shrink-0 border-[1.5px] ${indClass}`}>
+                            {indText}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className={`text-[13px] leading-tight ${
+                                done || running || gate ? "font-semibold text-[var(--text-primary)]" : "text-[var(--text-disabled)]"
+                              }`}
+                            >
+                              {metadata.name}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            {done && ["product_thinking", "prd", "tasks"].includes(type) && (
+                              <a
+                                href={`${BACKEND_URL}/api/projects/${project.id}/preview/docs/${
+                                  type === "product_thinking" ? "USER_PROFILES.html" : type === "prd" ? "PRD.html" : "TASKS.html"
+                                }`}
+                                download
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-sans text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] hover:border-[var(--border-strong)] rounded px-2.5 py-0.5 bg-[var(--bg-raised)] font-medium transition-colors cursor-pointer"
+                              >
+                                ↓ Download
+                              </a>
+                            )}
+                            <span
+                              className={`font-mono text-[10.5px] tracking-wide ${
+                                done
+                                  ? "text-[var(--text-tertiary)]"
+                                  : running
+                                  ? "text-[var(--text-primary)] font-semibold"
+                                  : gate
+                                  ? "text-[var(--border-strong)] font-semibold"
+                                  : "text-transparent"
+                              }`}
+                            >
+                              {done ? "Done" : running ? "Running" : gate ? "Awaiting" : ""}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Inline final deployment gate */}
+                        {gate && type === "approval" && showDeployGate && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="my-3 ml-10 border border-[var(--border-strong)] rounded bg-white p-4 shadow-sm"
+                          >
+                            <div className="text-[12px] font-bold mb-1">
+                              Deploy to production?
+                            </div>
+                            <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed mb-3">
+                              App verified in preview and ready to ship to public.
+                            </p>
+                            <button
+                              onClick={() => approve()}
+                              disabled={approving}
+                              className="cs-btn cs-btn-sm cs-btn-solid font-semibold disabled:opacity-40 text-[11px]"
+                            >
+                              {approving ? "Deploying..." : "Deploy now"}
+                            </button>
+                          </motion.div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right column: Dynamic build visualizer / logs */}
+              <div className="flex flex-col gap-4">
+                
+                {/* Visualizer Frame */}
+                <div className="rounded border border-[var(--border-default)] bg-white shadow-sm overflow-hidden flex flex-col min-h-[460px]">
+                  
+                  {/* Browser chrome headers */}
+                  <div className="flex h-10 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--border-default)]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--border-default)]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[var(--border-default)]" />
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      {["implementation", "review", "fixes", "approval", "release"].includes(activeStageType) && (
+                        <a
+                          href={`${BACKEND_URL}/api/projects/${project.id}/preview/`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-sans text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1"
+                        >
+                          Open in new tab ↗
+                        </a>
+                      )}
+                      <span className="font-mono text-[10px] text-[var(--text-tertiary)] tracking-wider uppercase">
+                        {activeStageType === "implementation" || activeStageType === "review" || activeStageType === "fixes"
+                          ? "APPLICATION ASSEMBLY"
+                          : `${activeStageType} ARTIFACT`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Visualizer content body */}
+                  <div className="flex-1 p-0 overflow-hidden">
+                    {/* Render live sandbox preview iframe during implementation, review, fixes, approval, or release stages */}
+                    {["implementation", "review", "fixes", "approval", "release"].includes(activeStageType) ? (
+                      <div className="w-full h-[500px] bg-white relative">
+                        <iframe
+                          src={`${BACKEND_URL}/api/projects/${project.id}/preview/?t=${new Date(project.updatedAt).getTime()}`}
+                          className="w-full h-[500px] bg-white border-0 block"
+                          title="Live build preview"
+                          sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+                        />
+                      </div>
+                    ) : activeArtifact ? (
+                      /* Render computed artifacts (PRD specification, tasks checklist, product thinking notes) */
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center pb-2 border-b border-[var(--border-subtle)]">
+                          <span className="font-mono text-[11px] font-semibold text-[var(--text-secondary)]">
+                            {activeStageType}_artifact.md
+                          </span>
+                          <span className="font-mono text-[9px] uppercase tracking-wide text-[var(--text-tertiary)] bg-[var(--bg-inset)] border border-[var(--border-default)] rounded px-1.5 py-0.5">
+                            {typeof activeArtifact.content === "string" ? "markdown" : "json"}
+                          </span>
+                        </div>
+                        <pre className="font-mono text-[12px] leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap select-text">
+                          {typeof activeArtifact.content === "string"
+                            ? activeArtifact.content
+                            : JSON.stringify(activeArtifact.content, null, 2)}
+                        </pre>
+                      </div>
+                    ) : (
+                      /* If active stage has no final artifact written yet, show live logging console */
+                      <div className="flex h-full items-center justify-center py-10">
+                        <StageLogVisualizer activeStage={activeStageType} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
+
+            </div>
           </div>
-        </main>
-      )}
-
-      {/* ─── Not logged in ─── */}
-      {isNotLoggedIn && (
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
-          <p className="text-[15px] text-[var(--gray-700)]">Please sign in to view this project.</p>
-        </div>
-      )}
-
-      {/* ─── Error / project not found ─── */}
-      {hasError && (
-        <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4">
-          <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn't load project</p>
-          <p className="text-[13px] text-[var(--gray-700)]">
-            {error instanceof Error ? error.message : "Something went wrong."}
-          </p>
-          <Link href="/dashboard" className="geist-btn geist-btn-secondary">← Back to dashboard</Link>
-        </div>
-      )}
-
-      {/* ─── Project detail ─── */}
-      {showProject && project && (
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        {/* Project meta */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-        >
-          <h1 className="text-2xl font-semibold tracking-[-0.02em]">{project.title}</h1>
-          <p className="mt-1 text-[14px] text-[var(--gray-700)]">{project.prompt}</p>
-          <p className="mt-1 text-[12px] text-[var(--gray-600)]">
-            Started {relativeTime(project.createdAt)}
-            {project.updatedAt !== project.createdAt && ` · Updated ${relativeTime(project.updatedAt)}`}
-          </p>
-        </motion.div>
-
-        {/* The conversational agent builder: chat + live preview. */}
-        <div className="mt-8">
-          <AgentWorkspace projectId={project.id} projectTitle={project.title} />
-        </div>
-      </main>
-      )}
+        )}
+      </div>
     </div>
   );
 }

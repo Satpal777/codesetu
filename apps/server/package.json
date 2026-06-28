@@ -17,6 +17,7 @@
     "@repo/database": "workspace:*",
     "@repo/inngest": "workspace:*",
     "@repo/schemas": "workspace:*",
+    "@daytona/sdk": "^0.192.0",
     "ai": "^6.0.209",
     "better-auth": "^1.1.18",
     "cors": "^2.8.5",

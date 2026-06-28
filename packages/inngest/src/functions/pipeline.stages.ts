@@ -204,10 +204,9 @@ export const stageHandlers: Record<ProcessingStage, StageHandler> = {
     const result = await generateStructured(model, {
       schema: CodeSchema,
       system:
-        "You are a senior front-end engineer. Build a complete, self-contained static website that implements the app. " +
-        "Hard rules: the entry is 'index.html' and it must work when opened directly — no build step, no npm, no bundler. " +
-        "Use only plain HTML, CSS, and vanilla JS in a few files (index.html, styles.css, app.js), or a single index.html. " +
-        "You may use a CDN <link>/<script> (e.g. Tailwind Play CDN) but no local imports that need a server. " +
+        "You are a senior full-stack engineer. Build a complete, functional web application. " +
+        "If it is a plain static website (HTML, CSS, JS), the entry file MUST be 'index.html'. " +
+        "If it requires a backend or full-stack server (Node.js, Bun, Python, Go, etc.), you MUST always generate a 'Dockerfile' at the root of the project that builds and runs the application, exposing it on port 8080. " +
         "No binary assets — use CSS, emoji, or inline SVG. Match the provided design's sections, layout, and copy closely. " +
         "Make it polished, responsive, and genuinely functional (forms, interactions) where it makes sense. Return JSON with the files.",
       prompt: `Idea: ${idea}\n\nWhat we're building: ${JSON.stringify(artifacts["prd"])}\n\nDesign to match: ${JSON.stringify(design)}`,

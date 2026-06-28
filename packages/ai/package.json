@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.86",
+    "@ai-sdk/google": "^3.0.86",
     "@ai-sdk/openai": "^3.0.74",
     "@openrouter/ai-sdk-provider": "^2.9.1",
     "ai": "^6.0.209",

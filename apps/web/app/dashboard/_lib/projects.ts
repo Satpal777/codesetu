@@ -175,7 +175,7 @@ export function stageLabel(type: StageType): string {
 
 /* ----------------------------- Models ------------------------------ */
 
-export type ModelProvider = "openai" | "anthropic" | "free";
+export type ModelProvider = "openai" | "anthropic" | "google" | "free";
 export type ModelTier = "premium" | "fast" | "free";
 
 export interface ModelInfo {

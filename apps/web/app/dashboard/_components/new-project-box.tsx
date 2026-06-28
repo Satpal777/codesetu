@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { createProject, type Project } from "../_lib/projects";
 import ModelPicker, { type ModelSelection } from "./model-picker";
 
@@ -13,17 +13,21 @@ const MODES: { id: Mode; label: string; blurb: string }[] = [
   { id: "autopilot", label: "Autopilot", blurb: "We build the whole thing in one go." },
 ];
 
-const EXAMPLES = [
-  "A waitlist page that collects emails",
-  "A simple habit tracker",
-  "A portfolio with a contact form",
-  "A landing page for a coffee shop",
-];
-
-export default function NewProjectBox({ onCreated }: { onCreated: (project: Project) => void }) {
+export default function NewProjectBox({
+  onCreated,
+  prompt: externalPrompt,
+  setPrompt: externalSetPrompt,
+}: {
+  onCreated: (project: Project) => void;
+  prompt?: string;
+  setPrompt?: (val: string) => void;
+}) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [prompt, setPrompt] = useState("");
+  const [localPrompt, setLocalPrompt] = useState("");
+  const prompt = externalPrompt !== undefined ? externalPrompt : localPrompt;
+  const setPrompt = externalSetPrompt !== undefined ? externalSetPrompt : setLocalPrompt;
+  
   const [mode, setMode] = useState<Mode>("copilot");
   const [models, setModels] = useState<ModelSelection>({ defaultModelId: "", overrides: {} });
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -31,11 +35,6 @@ export default function NewProjectBox({ onCreated }: { onCreated: (project: Proj
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = prompt.trim().length >= 10 && !submitting;
-
-  const useExample = (text: string) => {
-    setPrompt(text);
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  };
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -65,106 +64,92 @@ export default function NewProjectBox({ onCreated }: { onCreated: (project: Proj
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] p-5 shadow-[0_2px_2px_rgba(0,0,0,0.04)] md:p-6">
-      <label htmlFor="new-project-prompt" className="block text-[15px] font-semibold tracking-[-0.01em] text-[var(--gray-1000)]">
-        What do you want to make?
-      </label>
-      <p className="mt-1 text-[13px] text-[var(--gray-700)]">
-        Describe your idea in plain words. We&apos;ll ask a couple of questions, then build it for you.
-      </p>
-
-      {/* Idea composer — glows on focus. */}
-      <div className="composer-focus mt-4 rounded-xl border border-[var(--gray-alpha-300)] bg-[var(--field-background)] transition-[box-shadow,border-color] duration-150">
+    <div className="w-full">
+      {/* PromptInput */}
+      <div className="border border-[var(--border-strong)] rounded-lg bg-[var(--bg-raised)] shadow-[var(--shadow-md)] overflow-hidden transition-all focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
         <textarea
           ref={textareaRef}
-          id="new-project-prompt"
+          rows={4}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={onKeyDown}
-          rows={3}
-          placeholder="e.g. A simple page where people can join a waitlist with their email."
-          className="w-full resize-none bg-transparent px-4 py-3 text-[15px] leading-relaxed text-[var(--gray-1000)] placeholder:text-[var(--gray-600)] focus:outline-none"
+          placeholder="Describe what you want to build — a product, a tool, a page, an API…"
+          className="display-block w-full resize-none bg-transparent px-[18px] py-4 text-[15px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
         />
-      </div>
 
-      {/* Example ideas — fill the composer on tap. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] text-[var(--gray-600)]">Try one:</span>
-        {EXAMPLES.map((ex, i) => (
-          <button
-            key={ex}
-            type="button"
-            onClick={() => useExample(ex)}
-            style={{ animationDelay: `${i * 50}ms` }}
-            className="press animate-rise rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-100)] px-3 py-1 text-[12px] text-[var(--gray-900)] hover:border-[var(--gray-alpha-500)] hover:text-[var(--gray-1000)]"
-          >
-            {ex}
-          </button>
-        ))}
-      </div>
-
-      {/* How should we work? — sliding spring pill. */}
-      <div className="mt-5">
-        <p className="text-[13px] font-medium text-[var(--gray-1000)]">How should we work?</p>
-        <div className="mt-2 inline-flex rounded-lg border border-[var(--gray-alpha-300)] bg-[var(--background-200)] p-0.5">
-          {MODES.map((m) => {
-            const active = mode === m.id;
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMode(m.id)}
-                aria-pressed={active}
-                className="press relative z-10 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors"
-                style={{ color: active ? "var(--gray-1000)" : "var(--gray-700)" }}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="mode-pill"
-                    transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
-                    className="absolute inset-0 -z-10 rounded-md bg-[var(--background-100)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
-                  />
-                )}
-                {m.label}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-1.5 text-[12px] text-[var(--gray-600)]">{MODES.find((m) => m.id === mode)?.blurb}</p>
-      </div>
-
-      {/* Advanced: model picker, tucked away from non-technical users. */}
-      <div className="mt-4 border-t border-[var(--gray-alpha-100)] pt-4">
-        <button
-          type="button"
-          onClick={() => setShowAdvanced((v) => !v)}
-          className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--gray-700)] hover:text-[var(--gray-1000)]"
-        >
-          <span className="text-[10px]">{showAdvanced ? "▼" : "▶"}</span>
-          Advanced options
-        </button>
-        {showAdvanced && (
-          <div className="mt-3">
-            <ModelPicker onChange={setModels} />
+        <div className="flex items-center justify-between border-t border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className={`flex h-7 w-7 items-center justify-center rounded-[4px] border transition-colors ${
+                showAdvanced
+                  ? "border-[var(--border-strong)] bg-[var(--ink-950)] text-white"
+                  : "border-[var(--border-default)] bg-[var(--bg-raised)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+              }`}
+              title="Advanced options"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+            <span className="font-mono text-[11px] text-[var(--text-tertiary)]">{prompt.length} / 2000</span>
           </div>
+
+          <div className="flex items-center gap-3.5">
+            <span className="font-mono text-[11px] tracking-wide text-[var(--text-tertiary)]">⌘↵</span>
+            <button
+              onClick={() => void submit()}
+              disabled={!canSubmit}
+              className="cs-btn cs-btn-sm cs-btn-solid font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {submitting ? "Starting…" : "Build →"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-raised)] p-4 shadow-sm">
+              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Execution Mode</p>
+              <div className="mt-2 inline-flex rounded-lg border border-[var(--border-default)] bg-[var(--bg-inset)] p-0.5">
+                {MODES.map((m) => {
+                  const active = mode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMode(m.id)}
+                      className={`relative rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                        active ? "bg-white text-[var(--text-primary)] shadow-sm" : "text-[var(--text-secondary)]"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
+                {MODES.find((m) => m.id === mode)?.blurb}
+              </p>
+
+              <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
+                <ModelPicker onChange={setModels} />
+              </div>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {error && <p className="mt-3 text-[13px] text-[var(--red-900)]">{error}</p>}
-
-      <div className="mt-4 flex items-center justify-between">
-        <span className="hidden text-[12px] text-[var(--gray-600)] sm:inline">
-          Press <kbd className="font-mono text-[var(--gray-700)]">⌘</kbd>
-          <kbd className="font-mono text-[var(--gray-700)]">↵</kbd> to start
-        </span>
-        <button
-          onClick={() => void submit()}
-          disabled={!canSubmit}
-          className="geist-btn geist-btn-primary ml-auto disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {submitting ? "Starting…" : "Build it →"}
-        </button>
-      </div>
+      {error && <p className="mt-3 text-[13px] text-red-600">{error}</p>}
     </div>
   );
 }

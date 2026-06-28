@@ -9,7 +9,7 @@ import { aiConfig } from "./config.js";
  * already contain ":" — e.g. `…:free`).
  * ------------------------------------------------------------------ */
 
-export type Provider = "openai" | "anthropic" | "free";
+export type Provider = "openai" | "anthropic" | "google" | "free";
 export type Tier = "premium" | "fast" | "free";
 
 export interface ModelInfo {
@@ -24,6 +24,9 @@ export const MODELS: ModelInfo[] = [
   { id: "anthropic|claude-haiku-4-5", label: "Claude Haiku 4.5", provider: "anthropic", tier: "fast" },
   { id: "openai|gpt-4o", label: "GPT-4o", provider: "openai", tier: "premium" },
   { id: "openai|gpt-4o-mini", label: "GPT-4o mini", provider: "openai", tier: "fast" },
+  { id: "google|gemini-3.5-flash", label: "Gemini 3.5 Flash", provider: "google", tier: "free" },
+  { id: "google|gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "google", tier: "free" },
+  { id: "google|gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "google", tier: "free" },
   { id: "free|openai/gpt-oss-120b", label: "GPT-OSS 120B", provider: "free", tier: "free" },
   { id: "free|openai/gpt-oss-20b", label: "GPT-OSS 20B", provider: "free", tier: "free" },
   { id: "free|nvidia/nemotron-3-nano-30b-a3b", label: "Nemotron 3 Nano 30B", provider: "free", tier: "free" },
@@ -43,6 +46,7 @@ export function availableModels(): ModelInfo[] {
   const enabled: Record<Provider, boolean> = {
     openai: aiConfig.hasOpenAI(),
     anthropic: aiConfig.hasAnthropic(),
+    google: aiConfig.hasGoogle(),
     free: aiConfig.hasOpenRouter(),
   };
   return MODELS.filter((m) => enabled[m.provider]);

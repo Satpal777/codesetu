@@ -114,6 +114,13 @@ export const ProjectsController = {
         })
       );
 
+      // Warm up Daytona sandbox in background if enabled
+      if (process.env.DAYTONA_API_KEY) {
+        void import("../agent/runtime.js").then(({ getRuntime }) => {
+          void getRuntime().previewPath(projectId).catch(() => {});
+        });
+      }
+
       res.status(201).json({
         status: "success",
         message: "Project created and pipeline started",
