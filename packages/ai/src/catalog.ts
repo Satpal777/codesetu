@@ -9,7 +9,7 @@ import { aiConfig } from "./config.js";
  * already contain ":" — e.g. `…:free`).
  * ------------------------------------------------------------------ */
 
-export type Provider = "openai" | "anthropic" | "free";
+export type Provider = "openai" | "anthropic" | "google" | "free" | "cloudflare";
 export type Tier = "premium" | "fast" | "free";
 
 export interface ModelInfo {
@@ -24,11 +24,18 @@ export const MODELS: ModelInfo[] = [
   { id: "anthropic|claude-haiku-4-5", label: "Claude Haiku 4.5", provider: "anthropic", tier: "fast" },
   { id: "openai|gpt-4o", label: "GPT-4o", provider: "openai", tier: "premium" },
   { id: "openai|gpt-4o-mini", label: "GPT-4o mini", provider: "openai", tier: "fast" },
+  { id: "google|gemini-3.5-flash", label: "Gemini 3.5 Flash", provider: "google", tier: "free" },
+  { id: "google|gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "google", tier: "free" },
+  { id: "google|gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "google", tier: "free" },
   { id: "free|openai/gpt-oss-120b", label: "GPT-OSS 120B", provider: "free", tier: "free" },
   { id: "free|openai/gpt-oss-20b", label: "GPT-OSS 20B", provider: "free", tier: "free" },
   { id: "free|nvidia/nemotron-3-nano-30b-a3b", label: "Nemotron 3 Nano 30B", provider: "free", tier: "free" },
   { id: "free|nvidia/nemotron-3-super-120b", label: "Nemotron 3 Super", provider: "free", tier: "free" },
   { id: "free|stepfun/step-3.5-flash", label: "Step 3.5 Flash", provider: "free", tier: "free" },
+  { id: "cloudflare|@cf/meta/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout 17B", provider: "cloudflare", tier: "free" },
+  { id: "cloudflare|@cf/meta/llama-3.3-70b-instruct-fp8-fast", label: "Llama 3.3 70B Fast", provider: "cloudflare", tier: "free" },
+  { id: "cloudflare|@cf/qwen/qwq-32b", label: "QwQ 32B (Reasoning)", provider: "cloudflare", tier: "free" },
+  { id: "cloudflare|@cf/deepseek-ai/deepseek-r1-distill-qwen-32b", label: "DeepSeek R1 Distill 32B", provider: "cloudflare", tier: "free" },
 ];
 
 export const MODEL_IDS = MODELS.map((m) => m.id);
@@ -43,7 +50,9 @@ export function availableModels(): ModelInfo[] {
   const enabled: Record<Provider, boolean> = {
     openai: aiConfig.hasOpenAI(),
     anthropic: aiConfig.hasAnthropic(),
+    google: aiConfig.hasGoogle(),
     free: aiConfig.hasOpenRouter(),
+    cloudflare: aiConfig.hasCloudflare(),
   };
   return MODELS.filter((m) => enabled[m.provider]);
 }

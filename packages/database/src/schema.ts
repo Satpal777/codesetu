@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -83,6 +83,7 @@ export const project = pgTable("project", {
   deploymentUrl: text("deployment_url"),
   repoUrl: text("repo_url"),
   repoBranch: text("repo_branch"),
+  shareToken: text("share_token").unique(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
@@ -122,3 +123,32 @@ export const clarification = pgTable("clarification", {
   order: integer("order").notNull(),
   createdAt: timestamp("created_at").notNull(),
 });
+
+// ── Agent builder domain (Phase 1) ──────────────────────────────────────────
+
+export const message = pgTable("message", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => project.id),
+  // "user" | "assistant" | "system"
+  role: text("role").notNull(),
+  content: text("content").notNull().default(""),
+  // Tool calls/results, plan snapshots, and question payloads for this turn.
+  parts: jsonb("parts").$type<unknown[]>(),
+  createdAt: timestamp("created_at").notNull(),
+});
+
+export const file = pgTable(
+  "file",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").notNull().references(() => project.id),
+    // POSIX-relative path, unique per project (e.g. "index.html", "styles.css").
+    path: text("path").notNull(),
+    content: text("content").notNull().default(""),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (t) => ({
+    projectPathUnique: uniqueIndex("file_project_path_unique").on(t.projectId, t.path),
+  }),
+);

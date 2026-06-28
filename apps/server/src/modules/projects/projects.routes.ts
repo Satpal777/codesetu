@@ -12,5 +12,6 @@ router.get("/:id/clarifications", authGuard, ProjectsController.getClarification
 router.post("/:id/clarifications", authGuard, ProjectsController.submitClarifications);
 router.post("/:id/approve", authGuard, ProjectsController.approve);
 router.post("/:id/deploy", authGuard, ProjectsController.deploy);
+router.delete("/:id", authGuard, ProjectsController.delete);
 
 export const projectsRouter = router;

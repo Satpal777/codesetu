@@ -22,6 +22,20 @@
       "when": 1782416003301,
       "tag": "0002_yummy_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782650342762,
+      "tag": "0003_abandoned_morlun",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782667586036,
+      "tag": "0004_chubby_namor",
+      "breakpoints": true
     }
   ]
 }

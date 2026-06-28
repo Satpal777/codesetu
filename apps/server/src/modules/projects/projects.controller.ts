@@ -10,6 +10,8 @@ import {
   stage as stageTable,
   artifact as artifactTable,
   clarification as clarificationTable,
+  message as messageTable,
+  file as fileTable,
   eq,
   and,
 } from "@repo/database";
@@ -70,6 +72,7 @@ export const ProjectsController = {
       const stageModels = resolveStageModels(modelInput, PROCESSING_STAGES);
 
       const projectId = randomUUID();
+      const shareToken = randomUUID().replace(/-/g, "").slice(0, 12);
       const now = new Date();
 
       const title =
@@ -88,6 +91,7 @@ export const ProjectsController = {
         autopilot,
         repoUrl: input.repoUrl ?? null,
         repoBranch: input.repoBranch ?? null,
+        shareToken,
         createdAt: now,
         updatedAt: now,
       });
@@ -113,6 +117,13 @@ export const ProjectsController = {
           autopilot,
         })
       );
+
+      // Warm up Daytona sandbox in background if enabled
+      if (process.env.DAYTONA_API_KEY) {
+        void import("../agent/runtime.js").then(({ getRuntime }) => {
+          void getRuntime().previewPath(projectId).catch(() => {});
+        });
+      }
 
       res.status(201).json({
         status: "success",
@@ -279,6 +290,39 @@ export const ProjectsController = {
         .where(eq(projectTable.id, id));
 
       res.status(200).json({ status: "success", message: "Published", data: { url } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** DELETE /api/projects/:id — permanently remove project and all child data. */
+  async delete(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) throw new AppError("Not authenticated", 401);
+      const { id } = req.params as { id: string };
+
+      const rows = await db
+        .select({ id: projectTable.id })
+        .from(projectTable)
+        .where(and(eq(projectTable.id, id), eq(projectTable.userId, req.user.id)));
+      if (!rows[0]) throw new AppError("Project not found", 404);
+
+      await db.transaction(async (tx) => {
+        await tx.delete(artifactTable).where(eq(artifactTable.projectId, id));
+        await tx.delete(clarificationTable).where(eq(clarificationTable.projectId, id));
+        await tx.delete(messageTable).where(eq(messageTable.projectId, id));
+        await tx.delete(fileTable).where(eq(fileTable.projectId, id));
+        await tx.delete(stageTable).where(eq(stageTable.projectId, id));
+        await tx.delete(projectTable).where(eq(projectTable.id, id));
+      });
+
+      res.status(200).json({ status: "success", message: "Project deleted" });
+
+      if (process.env.DAYTONA_API_KEY) {
+        void import("../agent/runtime.js").then(({ destroySandbox }) => {
+          void destroySandbox(id);
+        });
+      }
     } catch (err) {
       next(err);
     }

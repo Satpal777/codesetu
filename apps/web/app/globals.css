@@ -619,3 +619,342 @@
     }
   }
 }
+
+/* ================================================================== *
+ * CodeSetu landing — "the bridge" monochrome editorial system.
+ * Scoped to .cs-landing so the rest of the app keeps the Geist tokens.
+ * Meaning is carried by value, weight, fill vs. outline and inversion
+ * ([data-theme="ink"]) — never by hue. Tokens mirror the imported
+ * Monochrome (B&W) design system.
+ * ================================================================== */
+.cs-landing {
+  /* Families (resolved from next/font CSS variables on <html>) */
+  --font-display: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-grotesk: var(--font-space-grotesk), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono-cs: var(--font-space-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Ink ramp (true neutral, 0 chroma) */
+  --black: #000000;
+  --ink-950: #0a0a0a;
+  --ink-900: #161616;
+  --ink-800: #222222;
+  --ink-700: #333333;
+  --ink-600: #4a4a4a;
+  --ink-500: #6e6e6e;
+  --ink-400: #909090;
+  --ink-300: #b5b5b5;
+  --ink-200: #d4d4d4;
+  --ink-150: #e3e3e3;
+  --ink-100: #ededed;
+  --ink-50: #f4f4f4;
+  --paper: #fafafa;
+  --white: #ffffff;
+
+  /* Semantic layer (light is the default) */
+  --bg-base: var(--paper);
+  --surface-card: var(--white);
+  --text-primary: var(--ink-950);
+  --text-secondary: var(--ink-600);
+  --text-tertiary: var(--ink-400);
+  --text-inverse: var(--white);
+  --border-subtle: var(--ink-150);
+  --border-default: var(--ink-200);
+  --border-strong: var(--ink-950);
+  --fill-solid: var(--ink-950);
+  --fill-solid-hover: var(--ink-800);
+  --fill-muted: var(--ink-100);
+  --bg-raised: var(--white);
+  --bg-inset: var(--ink-50);
+  --text-disabled: var(--ink-300);
+
+  --cs-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-grotesk);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Inverted scope — flip the semantic layer to white-on-black. */
+.cs-landing [data-theme="ink"] {
+  --bg-base: var(--ink-950);
+  --surface-card: var(--ink-900);
+  --text-primary: var(--white);
+  --text-secondary: var(--ink-300);
+  --text-tertiary: var(--ink-500);
+  --text-inverse: var(--ink-950);
+  --border-subtle: var(--ink-800);
+  --border-default: var(--ink-700);
+  --border-strong: var(--white);
+  --fill-solid: var(--white);
+  --fill-solid-hover: var(--ink-150);
+  --fill-muted: var(--ink-800);
+  --bg-raised: var(--ink-900);
+  --bg-inset: var(--ink-950);
+  --text-disabled: var(--ink-600);
+}
+
+.cs-landing ::selection {
+  background: var(--ink-950);
+  color: var(--white);
+}
+.cs-landing [data-theme="ink"] ::selection {
+  background: var(--white);
+  color: var(--ink-950);
+}
+
+/* Type roles */
+.cs-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+.cs-eyebrow {
+  font-family: var(--font-mono-cs);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.cs-mono {
+  font-family: var(--font-mono-cs);
+}
+
+/* Buttons */
+.cs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-family: var(--font-grotesk);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition: background-color 0.18s var(--cs-ease),
+    border-color 0.18s var(--cs-ease), color 0.18s var(--cs-ease),
+    transform 0.12s var(--cs-ease), box-shadow 0.18s var(--cs-ease);
+}
+.cs-btn:active {
+  transform: translateY(1px);
+}
+.cs-btn-sm {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.cs-btn-lg {
+  height: 50px;
+  padding: 0 26px;
+  font-size: 16px;
+}
+.cs-btn-solid {
+  background: var(--fill-solid);
+  color: var(--text-inverse);
+  border-color: var(--fill-solid);
+}
+.cs-btn-solid:hover {
+  background: var(--fill-solid-hover);
+  border-color: var(--fill-solid-hover);
+}
+.cs-btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.cs-btn-outline:hover {
+  background: var(--fill-muted);
+}
+.cs-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+.cs-btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--fill-muted);
+}
+
+/* Badge (outline pill with optional dot) */
+.cs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  font-family: var(--font-mono-cs);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: transparent;
+}
+.cs-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-950);
+}
+
+/* Feature card — crisp outline, signature hard-shadow lift on hover */
+.cs-feature {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: box-shadow 0.2s var(--cs-ease), transform 0.2s var(--cs-ease),
+    border-color 0.2s var(--cs-ease);
+}
+.cs-feature:hover {
+  border-color: var(--border-strong);
+  box-shadow: 5px 5px 0 0 var(--border-strong);
+  transform: translate(-2px, -2px);
+}
+
+/* Focus ring kept monochrome */
+.cs-landing a:focus-visible,
+.cs-landing button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--border-strong);
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-btn,
+  .cs-feature {
+    transition-duration: 0ms;
+  }
+  .cs-btn:active {
+    transform: none;
+  }
+  .cs-feature:hover {
+    transform: none;
+  }
+}
+
+/* ---- Header surface + flow palette (light defaults) ---- */
+.cs-landing {
+  --cs-header-bg: rgba(250, 250, 250, 0.82);
+
+  --flow-track: #e3e3e3;
+  --flow-line: #0a0a0a;
+  --flow-node-bg: #ffffff;
+  --flow-node-border: #d4d4d4;
+  --flow-icon: #909090;
+  --flow-node-on-bg: #0a0a0a;
+  --flow-icon-on: #ffffff;
+  --flow-label: #909090;
+  --flow-label-on: #0a0a0a;
+}
+
+/* ============================================================
+   DARK — invert the monochrome ramp for the landing only.
+   The app themes via :root[data-theme="dark"]; we mirror the ink
+   ramp so every var(--ink-*) / var(--paper) / var(--white) usage
+   flips correctly, with no per-element overrides.
+   ============================================================ */
+:root[data-theme="dark"] .cs-landing {
+  --ink-950: #f4f4f4;
+  --ink-900: #e3e3e3;
+  --ink-800: #d4d4d4;
+  --ink-700: #b3b3b3;
+  --ink-600: #9b9b9b;
+  --ink-500: #6e6e6e;
+  --ink-400: #565656;
+  --ink-300: #3a3a3a;
+  --ink-200: #2a2a2a;
+  --ink-150: #1f1f1f;
+  --ink-100: #181818;
+  --ink-50: #121212;
+  --paper: #0a0a0a;
+  --white: #141414;
+
+  --cs-header-bg: rgba(10, 10, 10, 0.72);
+
+  --flow-track: #2a2a2a;
+  --flow-line: #f4f4f4;
+  --flow-node-bg: #141414;
+  --flow-node-border: #2a2a2a;
+  --flow-icon: #6e6e6e;
+  --flow-node-on-bg: #f4f4f4;
+  --flow-icon-on: #0a0a0a;
+  --flow-label: #6e6e6e;
+  --flow-label-on: #f4f4f4;
+}
+
+/* ============================================================
+   BridgeFlow — all colours are CSS-driven so the animation
+   re-themes instantly. JS only toggles `.is-on` and drives
+   geometry (dash offset, transforms, opacity).
+   ============================================================ */
+.cs-flow-base {
+  stroke: var(--flow-track);
+}
+.cs-flow-fill,
+.cs-flow-comet-core,
+.cs-flow-comet-halo,
+.cs-flow-trail circle,
+.cs-flow-glow {
+  fill: var(--flow-line);
+}
+.cs-flow-fill {
+  fill: none;
+  stroke: var(--flow-line);
+}
+.cs-flow-comet-inner {
+  fill: var(--flow-node-bg);
+}
+.cs-flow-node rect {
+  fill: var(--flow-node-bg);
+  stroke: var(--flow-node-border);
+  transition: fill 0.25s var(--cs-ease), stroke 0.25s var(--cs-ease);
+}
+.cs-flow-node .ic {
+  color: var(--flow-icon);
+  transition: color 0.25s var(--cs-ease);
+}
+.cs-flow-node.is-on rect {
+  fill: var(--flow-node-on-bg);
+  stroke: var(--flow-node-on-bg);
+}
+.cs-flow-node.is-on .ic {
+  color: var(--flow-icon-on);
+}
+.cs-flow-label,
+.cs-flow-idx {
+  fill: var(--flow-label);
+  transition: fill 0.25s var(--cs-ease);
+}
+.cs-flow-label {
+  font-weight: 500;
+}
+.cs-flow-label.is-on,
+.cs-flow-idx.is-on {
+  fill: var(--flow-label-on);
+}
+.cs-flow-label.is-on {
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-flow-node rect,
+  .cs-flow-node .ic,
+  .cs-flow-label,
+  .cs-flow-idx {
+    transition-duration: 0ms;
+  }
+}

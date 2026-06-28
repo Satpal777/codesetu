@@ -1,237 +1,342 @@
 "use client";
 
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserResponse } from "@repo/schemas";
 import { authClient } from "../_lib/auth-client";
-import ThemeSwitch from "../_components/theme-switch";
-import { listProjects, type Project } from "./_lib/projects";
+import { listProjects, relativeTime, type Project } from "./_lib/projects";
 import NewProjectBox from "./_components/new-project-box";
-import ProjectCard from "./_components/project-card";
+import ThemeToggle from "../_components/theme-toggle";
+import DeleteProjectModal from "./_components/delete-project-modal";
 
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
-const EASE = [0.175, 0.885, 0.32, 1.1] as const;
+const SUGGESTIONS = [
+  "Landing page for my SaaS",
+  "Internal admin dashboard",
+  "Marketing site + blog",
+  "REST API + dashboard",
+  "App onboarding flow",
+];
 
-function Brand() {
-  return (
-    <Link href="/" aria-label="CodeSetu home" className="flex items-center gap-2">
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--gray-1000)] text-sm font-semibold text-[var(--background-100)]">
-        C
-      </span>
-      <span className="text-[15px] font-semibold tracking-tight text-[var(--gray-1000)]">CodeSetu</span>
-    </Link>
-  );
-}
+const TEMPLATES: { title: string; prompt: string }[] = [
+  {
+    title: "Landing page",
+    prompt: "Build a modern product landing page with a bold hero section, feature highlights grid, social proof, pricing table, and email signup CTA.",
+  },
+  {
+    title: "Admin dashboard",
+    prompt: "Build an internal admin dashboard with a sidebar navigation, key metric stat cards, a searchable and filterable data table, and a simple bar chart.",
+  },
+  {
+    title: "Marketing + blog",
+    prompt: "Build a marketing site with a homepage, feature sections, a blog index listing recent posts with thumbnails, and a single article page template.",
+  },
+  {
+    title: "Waitlist page",
+    prompt: "Build a high-converting waitlist page with a compelling headline, brief value proposition, an email capture form with validation, and a live signup counter.",
+  },
+  {
+    title: "Invoice tool",
+    prompt: "Build a browser-based invoice generator where I can add client info and line items with quantities and unit prices, auto-calculate totals, and print or download as PDF.",
+  },
+  {
+    title: "Portfolio site",
+    prompt: "Build a personal portfolio site with an about section, project showcase cards with tags, a skills list, and a contact form at the bottom.",
+  },
+];
+
+const STAGE_ORDER = [
+  "request",
+  "product_thinking",
+  "prd",
+  "design",
+  "tasks",
+  "implementation",
+  "review",
+  "fixes",
+  "approval",
+  "release",
+];
+
+const STAGE_LABELS: Record<string, string> = {
+  request: "Idea",
+  product_thinking: "Thinking",
+  prd: "Spec",
+  design: "Design",
+  tasks: "To-dos",
+  implementation: "Code",
+  review: "Review",
+  fixes: "Polishing",
+  approval: "Approval",
+  release: "Live",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  running: "Building",
+  awaiting_input: "Needs you",
+  completed: "Live",
+  failed: "Failed",
+};
 
 export default function DashboardPage() {
-  const { data: session, isPending: loadingUser } = authClient.useSession();
-  const user = session?.user ? (session.user as unknown as UserResponse) : null;
+  const { data: session } = authClient.useSession();
+  const user = session?.user ?? null;
   const queryClient = useQueryClient();
+  const [prompt, setPrompt] = useState("");
+  const composerRef = useRef<HTMLDivElement>(null);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+
+  const handleProjectDeleted = (id: string) => {
+    queryClient.setQueryData<Project[]>(["projects"], (prev) => prev?.filter((p) => p.id !== id) ?? []);
+    setDeletingProject(null);
+  };
+
+  const handleTemplateClick = (templatePrompt: string) => {
+    setPrompt(templatePrompt);
+    setTimeout(() => composerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
 
   const {
     data: projects = [],
     isLoading: projectsLoading,
     isError,
     error,
-    refetch,
   } = useQuery({
     queryKey: ["projects"],
     queryFn: ({ signal }) => listProjects(signal),
     enabled: !!user,
   });
 
-  const handleSignOut = async () => {
-    try {
-      await authClient.signOut();
-    } catch (err) {
-      console.error("Sign out failed:", err);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      await authClient.signIn.social({ provider: "google", callbackURL: `${FRONTEND_URL}/dashboard` });
-    } catch (err) {
-      console.error("Google sign-in failed:", err);
-    }
-  };
-
   const handleProjectCreated = (project: Project) => {
     queryClient.setQueryData<Project[]>(["projects"], (prev) => [project, ...(prev ?? [])]);
   };
 
-  // Only block with spinner before we know the session state at all.
-  const isInitialLoad = loadingUser && !user;
+  // Time-based greeting helper
+  const hr = new Date().getHours();
+  const period = hr < 12 ? "morning" : hr < 17 ? "afternoon" : "evening";
+  const greeting = user ? `Good ${period}, ${user.name.split(" ")[0]}.` : `Good ${period}.`;
 
-  return (
-    <div className={`flex min-h-screen flex-col ${user ? "bg-[var(--background-200)]" : "bg-[var(--background-100)]"} text-[var(--gray-1000)]`}>
-
-      {/* ─── Persistent header — ThemeSwitch lives here and never remounts ─── */}
-      <header className="sticky top-0 z-40 border-b border-[var(--gray-alpha-400)] bg-[var(--header-background)] backdrop-blur-md">
-        <nav className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
-          <Brand />
-          <div className="flex items-center gap-3">
-            <ThemeSwitch />
-
-            {/* Skeleton while the very first session fetch is in flight */}
-            {isInitialLoad && (
-              <div className="h-8 w-20 animate-pulse rounded-md bg-[var(--gray-100)]" />
-            )}
-
-            {/* Authenticated nav items */}
-            {!isInitialLoad && user && (
-              <>
-                <span className="flex items-center gap-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`}
-                    alt=""
-                    className="h-7 w-7 rounded-full border border-[var(--gray-alpha-400)] object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <span className="hidden text-sm font-medium text-[var(--gray-1000)] sm:inline">
-                    {user.name.split(" ")[0]}
-                  </span>
-                </span>
-                <button onClick={handleSignOut} className="geist-btn geist-btn-secondary">
-                  Sign out
-                </button>
-              </>
-            )}
-
-            {/* Sign-in button for unauthenticated visitors */}
-            {!isInitialLoad && !user && (
-              <button onClick={handleGoogleLogin} className="geist-btn geist-btn-primary">
-                Continue with Google
-              </button>
-            )}
-          </div>
-        </nav>
-      </header>
-
-      {/* ─── Page content ─── */}
-
-      {/* Initial loading spinner */}
-      {isInitialLoad && (
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--gray-200)] border-t-[var(--gray-1000)]" />
-        </div>
-      )}
-
-      {/* Not signed in */}
-      {!isInitialLoad && !user && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-          <Brand />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)]">
-              Sign in to open your dashboard
-            </h1>
-            <p className="mt-2 text-[15px] text-[var(--gray-700)]">Your projects live here once you're in.</p>
-          </div>
-          <button onClick={handleGoogleLogin} className="geist-btn geist-btn-lg geist-btn-primary">
-            Continue with Google
-          </button>
-        </div>
-      )}
-
-      {/* Dashboard */}
-      {!isInitialLoad && user && (
-        <main className="relative mx-auto w-full max-w-5xl flex-1 px-6 py-12 md:py-16">
-          {/* Premium backdrop behind the hero — glow + fading dot grid. */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] overflow-hidden">
-            <div className="hero-glow absolute inset-0" />
-            <div className="dot-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: EASE }}
-          >
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[var(--gray-1000)] md:text-3xl">
-              Welcome back, {user.name.split(" ")[0]}
-            </h1>
-            <p className="mt-2 text-[15px] text-[var(--gray-700)]">
-              Describe an idea. Watch it become a real, working app.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.06, ease: EASE }}
-            className="mt-8"
-          >
-            <NewProjectBox onCreated={handleProjectCreated} />
-          </motion.div>
-
-          <section className="mt-14">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-semibold tracking-[-0.01em] text-[var(--gray-1000)]">Your projects</h2>
-              {!projectsLoading && !isError && projects.length > 0 && (
-                <span className="text-[13px] text-[var(--gray-600)]">{projects.length} total</span>
-              )}
-            </div>
-
-            <div className="mt-5">
-              {projectsLoading && <ProjectsSkeleton />}
-
-              {isError && (
-                <div className="rounded-2xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] px-6 py-12 text-center">
-                  <p className="text-[15px] font-medium text-[var(--gray-1000)]">Couldn't load your projects</p>
-                  <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-[var(--gray-700)]">
-                    {error instanceof Error ? error.message : "Something went wrong."}
-                  </p>
-                  <button onClick={() => void refetch()} className="geist-btn geist-btn-secondary mt-5">
-                    Try again
-                  </button>
-                </div>
-              )}
-
-              {!projectsLoading && !isError && projects.length === 0 && <EmptyState />}
-
-              {!projectsLoading && !isError && projects.length > 0 && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {projects.map((project, i) => (
-                    <ProjectCard key={project.id} project={project} index={i} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        </main>
-      )}
-    </div>
+  // Sort and split projects
+  const sortedProjects = [...projects].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
-}
 
-function ProjectsSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-xl border border-[var(--gray-alpha-300)] bg-[var(--background-100)] p-5">
-          <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--gray-100)]" />
-          <div className="mt-3 h-3 w-full animate-pulse rounded bg-[var(--gray-100)]" />
-          <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-[var(--gray-100)]" />
-          <div className="mt-6 h-1.5 w-full animate-pulse rounded-full bg-[var(--gray-100)]" />
-          <div className="mt-4 h-3 w-24 animate-pulse rounded bg-[var(--gray-100)]" />
-        </div>
-      ))}
-    </div>
-  );
-}
+  const recentProjects = sortedProjects.slice(0, 4);
 
-function EmptyState() {
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--gray-alpha-400)] bg-[var(--background-100)] px-6 py-16 text-center">
-      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--gray-alpha-300)] bg-[var(--background-200)]">
-        <span className="text-lg">✦</span>
+    <div className="relative flex flex-col min-h-full bg-[var(--bg-base)]">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
       </div>
-      <p className="mt-4 text-[15px] font-medium text-[var(--gray-1000)]">No projects yet</p>
-      <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-[var(--gray-700)]">
-        Describe an idea in the box above and CodeSetu turns it into a real, working app.
-      </p>
+      {/* Main Composer Area */}
+      <div className="mx-auto w-full max-w-[700px] px-6 py-14">
+        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)] mb-2">
+          {period}
+        </div>
+        <h1 className="cs-display text-[36px] tracking-tight leading-none mb-9 text-[var(--text-primary)]">
+          {greeting}
+        </h1>
+
+        {/* Template Gallery */}
+        <div className="mb-6">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] mb-2">
+            Start from a template
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.title}
+                type="button"
+                onClick={() => handleTemplateClick(t.prompt)}
+                className="press cursor-pointer rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-3.5 py-1 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Suggestion Chips */}
+        <div className="flex flex-wrap gap-2 mb-3.5">
+          {SUGGESTIONS.map((sug) => (
+            <button
+              key={sug}
+              type="button"
+              onClick={() => setPrompt(sug)}
+              className="press cursor-pointer rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-3.5 py-1 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
+            >
+              {sug}
+            </button>
+          ))}
+        </div>
+
+        {/* Composer Box */}
+        <div ref={composerRef}>
+          <NewProjectBox onCreated={handleProjectCreated} prompt={prompt} setPrompt={setPrompt} />
+        </div>
+      </div>
+
+      {/* Projects List & History */}
+      <div className="mx-auto w-full max-w-[1040px] px-6 pb-20">
+        
+        {/* Recent Grid */}
+        <div className="mb-11">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[14px] font-semibold tracking-tight text-[var(--text-primary)]">Recent projects</h2>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">
+              {projects.length} total
+            </span>
+          </div>
+
+          {projectsLoading ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="h-28 w-full animate-pulse rounded border border-[var(--border-default)] bg-[var(--bg-raised)]" />
+              <div className="h-28 w-full animate-pulse rounded border border-[var(--border-default)] bg-[var(--bg-raised)]" />
+            </div>
+          ) : recentProjects.length === 0 ? (
+            <div className="rounded border border-dashed border-[var(--border-default)] bg-[var(--bg-raised)] px-6 py-10 text-center">
+              <p className="text-[13px] font-medium text-[var(--text-primary)]">No projects yet</p>
+              <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Describe your idea above to create one.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {recentProjects.map((p) => {
+                const progress = p.status === "completed" ? 100 : Math.max(10, Math.round(((STAGE_ORDER.indexOf(p.currentStage) + 1) / STAGE_ORDER.length) * 100));
+                const stageLabel = STAGE_LABELS[p.currentStage] || p.currentStage;
+                const statusLabel = STATUS_LABELS[p.status] || p.status;
+
+                return (
+                  <div key={p.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => setDeletingProject(p)}
+                      title="Delete project"
+                      className="absolute top-2 right-2 z-10 hidden group-hover:flex h-6 w-6 items-center justify-center rounded border border-[var(--border-default)] bg-[var(--bg-raised)] text-[var(--text-tertiary)] hover:border-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                      </svg>
+                    </button>
+                  <Link
+                    href={`/dashboard/${p.id}`}
+                    className="press block w-full rounded border border-[var(--border-default)] bg-[var(--surface-card)] p-4 text-left shadow-sm hover:border-[var(--border-strong)]"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <span className="text-[13px] font-semibold leading-snug text-[var(--text-primary)] truncate max-w-[200px]">
+                        {p.title}
+                      </span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] border border-[var(--border-default)] rounded px-1.5 py-[2px] bg-[var(--bg-inset)]">
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    <div className="h-[3px] w-full bg-[var(--bg-inset)] rounded-full overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-[var(--ink-950)] rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center text-[11px] font-mono text-[var(--text-tertiary)]">
+                      <span>
+                        {stageLabel} · {STAGE_ORDER.indexOf(p.currentStage) + 1}/{STAGE_ORDER.length}
+                      </span>
+                      <span>{relativeTime(p.updatedAt)}</span>
+                    </div>
+                  </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* History Table */}
+        {sortedProjects.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-[14px] font-semibold tracking-tight text-[var(--text-primary)]">Project history</h2>
+            </div>
+            
+            {/* Headers */}
+            <div className="grid grid-cols-[2fr_100px_120px_100px_1.5fr_36px] gap-3 px-2.5 pb-2 border-b-2 border-[var(--border-strong)] text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
+              <span>Project</span>
+              <span>Status</span>
+              <span>Stage</span>
+              <span>Updated</span>
+              <span>URL</span>
+              <span />
+            </div>
+
+            {/* Rows */}
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {sortedProjects.map((p) => {
+                const stageLabel = STAGE_LABELS[p.currentStage] || p.currentStage;
+                const statusLabel = STATUS_LABELS[p.status] || p.status;
+                const isLive = p.status === "completed" && p.deploymentUrl;
+
+                return (
+                  <div
+                    key={p.id}
+                    className="group grid grid-cols-[2fr_100px_120px_100px_1.5fr_36px] gap-3 px-2.5 py-3 items-center text-[13px] hover:bg-[var(--fill-muted)] transition-colors"
+                  >
+                    <Link
+                      href={`/dashboard/${p.id}`}
+                      className="font-medium text-[var(--text-primary)] truncate hover:underline"
+                    >
+                      {p.title}
+                    </Link>
+                    <span className="font-mono text-[11px] text-[var(--text-secondary)]">
+                      {statusLabel}
+                    </span>
+                    <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
+                      {stageLabel}
+                    </span>
+                    <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
+                      {new Date(p.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    </span>
+                    {isLive ? (
+                      <a
+                        href={p.deploymentUrl || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline truncate"
+                      >
+                        {p.deploymentUrl?.replace(/^https?:\/\//, "")}
+                      </a>
+                    ) : (
+                      <span className="font-mono text-[11px] text-[var(--text-disabled)]">—</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDeletingProject(p)}
+                      title="Delete project"
+                      className="hidden group-hover:flex h-6 w-6 items-center justify-center rounded border border-transparent text-[var(--text-disabled)] hover:border-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {deletingProject && (
+        <DeleteProjectModal
+          project={deletingProject}
+          onClose={() => setDeletingProject(null)}
+          onDeleted={() => handleProjectDeleted(deletingProject.id)}
+        />
+      )}
     </div>
   );
 }
