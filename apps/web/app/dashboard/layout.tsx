@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { authClient } from "../_lib/auth-client";
 import { listProjects, relativeTime } from "./_lib/projects";
-import ThemeSwitch from "../_components/theme-switch";
 
 // Map backend stages to clean label
 const STAGE_LABELS: Record<string, string> = {

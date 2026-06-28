@@ -3,6 +3,8 @@ import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { createOpenRouter, type OpenRouterProvider } from "@openrouter/ai-sdk-provider";
+import { createWorkersAI } from "workers-ai-provider";
+
 import { aiConfig } from "./config.js";
 
 /* ------------------------------------------------------------------ *
@@ -11,16 +13,26 @@ import { aiConfig } from "./config.js";
  * free ids contain their own ":" (e.g. `free|deepseek/deepseek-r1:free`).
  * Switch providers by switching the string — nothing else changes.
  *
- * Built lazily so OPENROUTER_API_KEY is read after the server's
- * dotenv.config() has run.
+ * Built lazily so keys are read after the server's dotenv.config() runs.
  * ------------------------------------------------------------------ */
 import { availableModels } from "./catalog.js";
 
 let openrouter: OpenRouterProvider | null = null;
+let workersAI: ReturnType<typeof createWorkersAI> | null = null;
 
 function getOpenRouter(): OpenRouterProvider {
   if (!openrouter) openrouter = createOpenRouter({ apiKey: aiConfig.openRouterKey() });
   return openrouter;
+}
+
+function getWorkersAI(): ReturnType<typeof createWorkersAI> {
+  if (!workersAI) {
+    workersAI = createWorkersAI({
+      accountId: aiConfig.cloudflareAccountId()!,
+      apiKey: aiConfig.cloudflareApiKey()!,
+    });
+  }
+  return workersAI;
 }
 
 export function resolveModel(modelId: string): LanguageModel {
@@ -38,6 +50,7 @@ export function resolveModel(modelId: string): LanguageModel {
     anthropic: aiConfig.hasAnthropic(),
     google: aiConfig.hasGoogle(),
     free: aiConfig.hasOpenRouter(),
+    cloudflare: aiConfig.hasCloudflare(),
   };
 
   const isEnabled = enabled[provider] ?? false;
@@ -61,6 +74,8 @@ export function resolveModel(modelId: string): LanguageModel {
       return google(model);
     case "free":
       return getOpenRouter().chat(model);
+    case "cloudflare":
+      return getWorkersAI()(model) as LanguageModel;
     default:
       throw new Error(`Unknown provider "${provider}" in model id: ${activeModelId}`);
   }

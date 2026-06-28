@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "../_lib/auth-client";
 import { listProjects, relativeTime, type Project } from "./_lib/projects";
 import NewProjectBox from "./_components/new-project-box";
-import ThemeSwitch from "../_components/theme-switch";
+import ThemeToggle from "../_components/theme-toggle";
 
 const SUGGESTIONS = [
   "Landing page for my SaaS",
@@ -118,7 +118,7 @@ export default function DashboardPage() {
   return (
     <div className="relative flex flex-col min-h-full bg-[var(--bg-base)]">
       <div className="absolute top-6 right-6">
-        <ThemeSwitch />
+        <ThemeToggle />
       </div>
       {/* Main Composer Area */}
       <div className="mx-auto w-full max-w-[700px] px-6 py-14">

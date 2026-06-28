@@ -9,7 +9,7 @@ import { aiConfig } from "./config.js";
  * already contain ":" — e.g. `…:free`).
  * ------------------------------------------------------------------ */
 
-export type Provider = "openai" | "anthropic" | "google" | "free";
+export type Provider = "openai" | "anthropic" | "google" | "free" | "cloudflare";
 export type Tier = "premium" | "fast" | "free";
 
 export interface ModelInfo {
@@ -32,6 +32,10 @@ export const MODELS: ModelInfo[] = [
   { id: "free|nvidia/nemotron-3-nano-30b-a3b", label: "Nemotron 3 Nano 30B", provider: "free", tier: "free" },
   { id: "free|nvidia/nemotron-3-super-120b", label: "Nemotron 3 Super", provider: "free", tier: "free" },
   { id: "free|stepfun/step-3.5-flash", label: "Step 3.5 Flash", provider: "free", tier: "free" },
+  { id: "cloudflare|@cf/meta/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout 17B", provider: "cloudflare", tier: "free" },
+  { id: "cloudflare|@cf/meta/llama-3.3-70b-instruct-fp8-fast", label: "Llama 3.3 70B Fast", provider: "cloudflare", tier: "free" },
+  { id: "cloudflare|@cf/qwen/qwq-32b", label: "QwQ 32B (Reasoning)", provider: "cloudflare", tier: "free" },
+  { id: "cloudflare|@cf/deepseek-ai/deepseek-r1-distill-qwen-32b", label: "DeepSeek R1 Distill 32B", provider: "cloudflare", tier: "free" },
 ];
 
 export const MODEL_IDS = MODELS.map((m) => m.id);
@@ -48,6 +52,7 @@ export function availableModels(): ModelInfo[] {
     anthropic: aiConfig.hasAnthropic(),
     google: aiConfig.hasGoogle(),
     free: aiConfig.hasOpenRouter(),
+    cloudflare: aiConfig.hasCloudflare(),
   };
   return MODELS.filter((m) => enabled[m.provider]);
 }

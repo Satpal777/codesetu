@@ -12,8 +12,12 @@ export const aiConfig = {
   anthropicKey: () => read("ANTHROPIC_API_KEY"),
   googleKey: () => read("GOOGLE_GENERATIVE_AI_API_KEY"),
   openRouterKey: () => read("OPENROUTER_API_KEY"),
+  cloudflareAccountId: () => read("CLOUDFLARE_ACCOUNT_ID"),
+  cloudflareApiKey: () => read("CLOUDFLARE_API_TOKEN"),
   hasOpenAI: () => !!read("OPENAI_API_KEY"),
   hasAnthropic: () => !!read("ANTHROPIC_API_KEY"),
   hasGoogle: () => !!read("GOOGLE_GENERATIVE_AI_API_KEY"),
   hasOpenRouter: () => !!read("OPENROUTER_API_KEY"),
+  hasCloudflare: () => !!read("CLOUDFLARE_ACCOUNT_ID") && !!read("CLOUDFLARE_API_TOKEN"),
+
 };

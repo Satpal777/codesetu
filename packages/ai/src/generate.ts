@@ -12,10 +12,9 @@ export async function generateStructured<S extends z.ZodType>(
   modelId: string,
   opts: { schema: S; system?: string; prompt: string }
 ): Promise<z.infer<S>> {
-  // OpenRouter free-tier models don't support function-calling (the default
-  // "tool" mode), so we fall back to "json" mode for them. All first-party
-  // provider SDKs (OpenAI, Anthropic, Google) work best with the default.
-  const useJsonMode = modelId.startsWith("free|");
+  // OpenRouter free-tier and Cloudflare Workers AI models don't support
+  // function-calling tool mode, so fall back to JSON mode.
+  const useJsonMode = modelId.startsWith("free|") || modelId.startsWith("cloudflare|");
 
   const { object } = await generateObject({
     model: resolveModel(modelId),

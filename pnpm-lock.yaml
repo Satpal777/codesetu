@@ -169,6 +169,9 @@ importers:
       ai:
         specifier: ^6.0.209
         version: 6.0.209(zod@3.25.76)
+      workers-ai-provider:
+        specifier: ^3.2.1
+        version: 3.2.1(@ai-sdk/anthropic@3.0.86(zod@3.25.76))(@ai-sdk/google@3.0.86(zod@3.25.76))(@ai-sdk/openai@3.0.74(zod@3.25.76))(@ai-sdk/provider@3.0.12)(ai@6.0.209(zod@3.25.76))
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -4948,6 +4951,22 @@ packages:
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
+
+  workers-ai-provider@3.2.1:
+    resolution: {integrity: sha512-VEnwunVpYTJeGAadgsljIQSc3JhBDQ9QYxzTOnq4fcQHguWTpb06MKLd5al7UIb7lxa5XzZm9CdQ9T+EN99Rtw==}
+    peerDependencies:
+      '@ai-sdk/anthropic': ^3.0.0
+      '@ai-sdk/google': ^3.0.0
+      '@ai-sdk/openai': ^3.0.0
+      '@ai-sdk/provider': ^3.0.0
+      ai: ^6.0.0
+    peerDependenciesMeta:
+      '@ai-sdk/anthropic':
+        optional: true
+      '@ai-sdk/google':
+        optional: true
+      '@ai-sdk/openai':
+        optional: true
 
   wrap-ansi@7.0.0:
     resolution: {integrity: sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==}
@@ -9976,6 +9995,15 @@ snapshots:
       stackback: 0.0.2
 
   word-wrap@1.2.5: {}
+
+  workers-ai-provider@3.2.1(@ai-sdk/anthropic@3.0.86(zod@3.25.76))(@ai-sdk/google@3.0.86(zod@3.25.76))(@ai-sdk/openai@3.0.74(zod@3.25.76))(@ai-sdk/provider@3.0.12)(ai@6.0.209(zod@3.25.76)):
+    dependencies:
+      '@ai-sdk/provider': 3.0.12
+      ai: 6.0.209(zod@3.25.76)
+    optionalDependencies:
+      '@ai-sdk/anthropic': 3.0.86(zod@3.25.76)
+      '@ai-sdk/google': 3.0.86(zod@3.25.76)
+      '@ai-sdk/openai': 3.0.74(zod@3.25.76)
 
   wrap-ansi@7.0.0:
     dependencies:
