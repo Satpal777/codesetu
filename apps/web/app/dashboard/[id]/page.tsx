@@ -304,7 +304,50 @@ function StageLogVisualizer({ activeStage }: { activeStage: StageType }) {
   );
 }
 
-// ══ 3. Project Detail Page Controller ══
+// ══ 3. Simple Progress View (for non-developer users) ══
+function SimpleProgressView({ activeStageIndex, totalStages, activeStageType }: {
+  activeStageIndex: number;
+  totalStages: number;
+  activeStageType: StageType;
+}) {
+  const FRIENDLY_LABELS: Record<StageType, string> = {
+    request: "Understanding your idea…",
+    product_thinking: "Thinking through your users…",
+    prd: "Writing out what to build…",
+    design: "Sketching the layout…",
+    tasks: "Planning the build steps…",
+    implementation: "Writing your app…",
+    review: "Checking for issues…",
+    fixes: "Polishing…",
+    approval: "Almost ready to go live…",
+    release: "Deploying to the web…",
+  };
+
+  const pct = Math.round(((activeStageIndex + 1) / totalStages) * 100);
+
+  return (
+    <div className="mx-auto max-w-lg w-full px-6 py-20 flex flex-col items-center gap-6">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--bg-inset)] border-t-[var(--ink-950)]" />
+      <div className="w-full text-center">
+        <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-1">
+          {FRIENDLY_LABELS[activeStageType] ?? "Building your app…"}
+        </p>
+        <p className="font-mono text-[11px] text-[var(--text-tertiary)]">{pct}% complete</p>
+      </div>
+      <div className="h-[3px] w-full max-w-xs bg-[var(--bg-inset)] rounded-full overflow-hidden">
+        <div
+          className="h-full bg-[var(--ink-950)] rounded-full transition-all duration-700"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-[11px] text-[var(--text-tertiary)] text-center max-w-xs">
+        Your app is being built in the background — we'll switch you to the live editor as soon as it's ready.
+      </p>
+    </div>
+  );
+}
+
+// ══ 4. Project Detail Page Controller ══
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ?? null;
@@ -312,6 +355,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const [projectId, setProjectId] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+
+  const [devMode, setDevMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("cs_dev_mode") === "true";
+  });
+
+  const toggleDevMode = () => {
+    setDevMode((prev) => {
+      const next = !prev;
+      localStorage.setItem("cs_dev_mode", String(next));
+      return next;
+    });
+  };
 
   // Unwrap Next.js async params
   useEffect(() => {
@@ -531,6 +587,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={toggleDevMode}
+            title={devMode ? "Switch to simple view" : "Switch to developer view"}
+            className={`flex items-center gap-1.5 rounded-[4px] border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+              devMode
+                ? "border-[var(--border-strong)] bg-[var(--ink-950)] text-white"
+                : "border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Dev
+          </button>
           <ThemeSwitch />
           <span
             className={`cs-badge text-[11px] uppercase tracking-wider font-semibold border ${
@@ -601,9 +672,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             />
           </div>
         ) : (
-          /* ══ Active Build: 2-Column visualizer ("See what is going on") ══ */
-          <div className="mx-auto w-full max-w-6xl px-6 py-10">
-            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2.2fr] gap-8 items-start">
+          /* ══ Active Build: Progress or full stage checklist ══ */
+          <div className="flex-1">
+            {devMode ? (
+              /* Developer mode — full SDLC stage checklist + log visualizer */
+              <div className="mx-auto w-full max-w-6xl px-6 py-10">
+                <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2.2fr] gap-8 items-start">
               
               {/* Left column: Stages checklist */}
               <div className="rounded border border-[var(--border-default)] bg-[var(--bg-raised)] p-5 shadow-sm">
@@ -787,7 +861,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
-            </div>
+                </div>
+              </div>
+            ) : (
+              /* Simple mode — friendly progress view */
+              <SimpleProgressView
+                activeStageIndex={activeStageIndex}
+                totalStages={STAGE_ORDER.length}
+                activeStageType={activeStageType}
+              />
+            )}
           </div>
         )}
       </div>
