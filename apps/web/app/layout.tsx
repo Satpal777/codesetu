@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Caveat, Patrick_Hand } from "next/font/google";
+import {
+  Caveat,
+  Patrick_Hand,
+  Instrument_Serif,
+  Space_Grotesk,
+  Space_Mono,
+} from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { QueryProvider } from "./_components/query-provider";
@@ -24,6 +30,27 @@ const patrickHand = Patrick_Hand({
   variable: "--font-patrick-hand",
   subsets: ["latin"],
   weight: ["400"],
+});
+
+// Monochrome "bridge" landing system: editorial serif display, geometric
+// grotesque for UI/body, mono for eyebrows and metadata.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -54,7 +81,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${caveat.variable} ${patrickHand.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${caveat.variable} ${patrickHand.variable} ${instrumentSerif.variable} ${spaceGrotesk.variable} ${spaceMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Script
