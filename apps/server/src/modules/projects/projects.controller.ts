@@ -14,6 +14,7 @@ import {
   file as fileTable,
   eq,
   and,
+  inArray,
 } from "@repo/database";
 import { inngest, events, PROCESSING_STAGES, pipelineEmitter, type PipelineUpdate } from "@repo/inngest";
 import { StageModelsInputSchema, resolveStageModels } from "@repo/ai";
@@ -290,6 +291,43 @@ export const ProjectsController = {
         .where(eq(projectTable.id, id));
 
       res.status(200).json({ status: "success", message: "Published", data: { url } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** DELETE /api/projects — permanently remove all projects and child data for the user. */
+  async deleteAll(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) throw new AppError("Not authenticated", 401);
+
+      const userProjects = await db
+        .select({ id: projectTable.id })
+        .from(projectTable)
+        .where(eq(projectTable.userId, req.user.id));
+
+      const projectIds = userProjects.map((p) => p.id);
+
+      if (projectIds.length > 0) {
+        await db.transaction(async (tx) => {
+          await tx.delete(artifactTable).where(inArray(artifactTable.projectId, projectIds));
+          await tx.delete(clarificationTable).where(inArray(clarificationTable.projectId, projectIds));
+          await tx.delete(messageTable).where(inArray(messageTable.projectId, projectIds));
+          await tx.delete(fileTable).where(inArray(fileTable.projectId, projectIds));
+          await tx.delete(stageTable).where(inArray(stageTable.projectId, projectIds));
+          await tx.delete(projectTable).where(inArray(projectTable.id, projectIds));
+        });
+
+        if (process.env.DAYTONA_API_KEY) {
+          void import("../agent/runtime.js").then(({ destroySandbox }) => {
+            for (const id of projectIds) {
+              void destroySandbox(id).catch(() => {});
+            }
+          });
+        }
+      }
+
+      res.status(200).json({ status: "success", message: "All projects deleted" });
     } catch (err) {
       next(err);
     }

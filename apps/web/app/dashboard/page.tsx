@@ -8,6 +8,7 @@ import { listProjects, relativeTime, type Project } from "./_lib/projects";
 import NewProjectBox from "./_components/new-project-box";
 import ThemeToggle from "../_components/theme-toggle";
 import DeleteProjectModal from "./_components/delete-project-modal";
+import DeleteAllProjectsModal from "./_components/delete-all-projects-modal";
 
 const SUGGESTIONS = [
   "Landing page for my SaaS",
@@ -84,10 +85,16 @@ export default function DashboardPage() {
   const [prompt, setPrompt] = useState("");
   const composerRef = useRef<HTMLDivElement>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
   const handleProjectDeleted = (id: string) => {
     queryClient.setQueryData<Project[]>(["projects"], (prev) => prev?.filter((p) => p.id !== id) ?? []);
     setDeletingProject(null);
+  };
+
+  const handleAllProjectsDeleted = () => {
+    queryClient.setQueryData<Project[]>(["projects"], []);
+    setShowDeleteAllModal(false);
   };
 
   const handleTemplateClick = (templatePrompt: string) => {
@@ -258,6 +265,19 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-3.5">
               <h2 className="text-[14px] font-semibold tracking-tight text-[var(--text-primary)]">Project history</h2>
+              <button
+                type="button"
+                onClick={() => setShowDeleteAllModal(true)}
+                className="flex items-center gap-1.5 rounded-[4px] border border-transparent px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] hover:border-red-400 hover:text-red-600 transition-colors cursor-pointer"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4h6v2" />
+                </svg>
+                Delete all
+              </button>
             </div>
             
             {/* Headers */}
@@ -335,6 +355,13 @@ export default function DashboardPage() {
           project={deletingProject}
           onClose={() => setDeletingProject(null)}
           onDeleted={() => handleProjectDeleted(deletingProject.id)}
+        />
+      )}
+
+      {showDeleteAllModal && (
+        <DeleteAllProjectsModal
+          onClose={() => setShowDeleteAllModal(false)}
+          onDeleted={handleAllProjectsDeleted}
         />
       )}
     </div>
