@@ -3,8 +3,13 @@ import { authRouter } from "../modules/auth/auth.routes.js";
 import { modelsRouter } from "../modules/models/models.routes.js";
 import { projectsRouter } from "../modules/projects/projects.routes.js";
 import { agentRouter } from "../modules/agent/agent.routes.js";
+import { AgentController } from "../modules/agent/agent.controller.js";
 
 const router = Router();
+
+// Public — no auth middleware
+router.get("/share/:token", AgentController.sharePreview);
+router.get("/share/:token/*", AgentController.sharePreview);
 
 router.use("/user", authRouter);
 router.use("/models", modelsRouter);

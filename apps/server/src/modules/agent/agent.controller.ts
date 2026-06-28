@@ -1,4 +1,4 @@
-import { Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { AgentChatInputSchema } from "@repo/schemas";
 import { db, project as projectTable, artifact as artifactTable, eq, and } from "@repo/database";
 import { resolveModel, DEFAULT_MODEL_ID, availableModels } from "@repo/ai";
@@ -242,6 +242,48 @@ export const AgentController = {
 
         const arrayBuffer = await response.arrayBuffer();
         res.status(response.status).send(Buffer.from(arrayBuffer));
+        return;
+      }
+
+      const matchingFile = files.find((f) => f.path === path || f.path.endsWith(path));
+      if (!matchingFile) {
+        res.status(404).type("text/plain").send(`Not found: ${path}`);
+        return;
+      }
+      res.setHeader("Content-Type", contentTypeFor(path));
+      res.setHeader("Cache-Control", "no-store");
+      res.send(matchingFile.content);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** GET /api/share/:token/* — public unauthenticated preview for a shared project. */
+  async sharePreview(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token } = req.params as { token: string };
+
+      // Look up the project by share token (no user ownership check — intentionally public)
+      const rows = await db
+        .select()
+        .from(projectTable)
+        .where(eq(projectTable.shareToken, token));
+      if (!rows[0]) {
+        res.status(404).type("text/plain").send("Preview not found.");
+        return;
+      }
+      const projectId = rows[0].id;
+
+      const rest = (req.params as Record<string, string>)["0"] ?? "";
+      const path = rest === "" || rest.endsWith("/") ? `${rest}index.html` : rest;
+
+      const fileStore = new DbFileStore(projectId);
+      const files = await fileStore.list();
+
+      if (files.length === 0) {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-store");
+        res.send(`<!DOCTYPE html><html><body style="font-family:system-ui;padding:40px;color:#171717"><h2>Preview not ready yet.</h2><p>Files are still being generated.</p></body></html>`);
         return;
       }
 

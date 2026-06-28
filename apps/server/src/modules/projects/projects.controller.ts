@@ -70,6 +70,7 @@ export const ProjectsController = {
       const stageModels = resolveStageModels(modelInput, PROCESSING_STAGES);
 
       const projectId = randomUUID();
+      const shareToken = randomUUID().replace(/-/g, "").slice(0, 12);
       const now = new Date();
 
       const title =
@@ -88,6 +89,7 @@ export const ProjectsController = {
         autopilot,
         repoUrl: input.repoUrl ?? null,
         repoBranch: input.repoBranch ?? null,
+        shareToken,
         createdAt: now,
         updatedAt: now,
       });
