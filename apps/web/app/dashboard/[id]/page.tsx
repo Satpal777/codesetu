@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "../../_lib/auth-client";
 import AssemblyPanel from "../_components/assembly-panel";
 import AgentWorkspace from "./_components/agent-workspace";
 import ThemeToggle from "../../_components/theme-toggle";
+import DeleteProjectModal from "../_components/delete-project-modal";
 import {
   getProject,
   getShareUrl,
@@ -384,9 +386,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ?? null;
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [projectId, setProjectId] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleProjectDeleted = () => {
+    if (projectId) {
+      queryClient.removeQueries({ queryKey: ["project", projectId] });
+      queryClient.setQueryData<Project[]>(["projects"], (prev) =>
+        prev?.filter((p) => p.id !== projectId) ?? []
+      );
+    }
+    router.push("/dashboard");
+  };
 
   const [devMode, setDevMode] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -619,6 +633,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex items-center gap-4">
+          {showProject && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              title="Delete project"
+              className="flex items-center gap-1.5 rounded-[4px] border border-transparent px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] hover:border-red-400 hover:text-red-600 transition-colors"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14H6L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4h6v2" />
+              </svg>
+              Delete
+            </button>
+          )}
           <button
             onClick={toggleDevMode}
             title={devMode ? "Switch to simple view" : "Switch to developer view"}
@@ -909,6 +939,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
       </div>
+
+      {showDeleteModal && project && (
+        <DeleteProjectModal
+          project={project}
+          onClose={() => setShowDeleteModal(false)}
+          onDeleted={handleProjectDeleted}
+        />
+      )}
     </div>
   );
 }
