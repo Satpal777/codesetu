@@ -22,4 +22,5 @@ export {
   type StageModelsInput,
 } from "./stage-models.js";
 export { generateStructured, generateProse } from "./generate.js";
+export { resolveModel } from "./registry.js";
 export { aiConfig } from "./config.js";
