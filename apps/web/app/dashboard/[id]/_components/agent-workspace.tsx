@@ -41,11 +41,13 @@ export default function AgentWorkspace({
   projectTitle,
   modelId,
   shareToken,
+  initialPrompt,
 }: {
   projectId: string;
   projectTitle: string;
   modelId?: string;
   shareToken?: string | null;
+  initialPrompt?: string;
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [plan, setPlan] = useState<string[]>([]);
@@ -53,6 +55,7 @@ export default function AgentWorkspace({
   const [busy, setBusy] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const didAutoSend = useRef(false);
 
   const QUICK_ACTIONS = [
     "Make it mobile-friendly",
@@ -70,7 +73,7 @@ export default function AgentWorkspace({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
-  // Load existing history on mount.
+  // Load existing history on mount; auto-send initialPrompt if no history exists.
   useEffect(() => {
     fetch(`${BACKEND_URL}/api/projects/${projectId}/agent/messages`, { credentials: "include" })
       .then((r) => r.json())
@@ -82,9 +85,15 @@ export default function AgentWorkspace({
             text: m.content,
           }))
         );
-        if (msgs.length > 0) setPreviewKey((k) => k + 1);
+        if (msgs.length > 0) {
+          setPreviewKey((k) => k + 1);
+        } else if (initialPrompt && !didAutoSend.current) {
+          didAutoSend.current = true;
+          void send(initialPrompt);
+        }
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Immutably update the most recent (assistant) turn.
