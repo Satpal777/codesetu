@@ -9,7 +9,7 @@
     "check-types": "turbo run check-types",
     "inngest:dev": "npx --yes inngest-cli@latest dev -u http://localhost:5001/api/inngest",
     "env:sync": "node scripts/sync-env.js",
-    "postinstall": "node scripts/sync-env.js"
+    "postinstall": "node scripts/sync-env.js || exit 0"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
@@ -19,9 +19,5 @@
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  }
 }
