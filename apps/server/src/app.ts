@@ -10,9 +10,18 @@ import { errorHandler } from "./middleware/error.middleware.js";
 const app = express();
 
 // CORS must allow credentials so the browser sends/receives the session cookie.
+// CLIENT_URL may be a comma-separated list of allowed origins for multi-env deploys.
+const allowedOrigins = config.clientUrl
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: origin "${origin}" not allowed`));
+    },
     credentials: true,
   })
 );

@@ -105,22 +105,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </svg>
             New build
           </Link>
-          <button className="flex w-full items-center gap-2.5 rounded-[4px] px-2.5 py-2.5 text-left text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--fill-muted)] hover:text-[var(--text-primary)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="flex-shrink-0">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-            </svg>
-            Projects
-          </button>
-          <button className="flex w-full items-center gap-2.5 rounded-[4px] px-2.5 py-2.5 text-left text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--fill-muted)] hover:text-[var(--text-primary)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="flex-shrink-0">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
-            </svg>
-            Settings
-          </button>
         </nav>
 
         <div className="mx-2 h-[1px] bg-[var(--border-subtle)]" />

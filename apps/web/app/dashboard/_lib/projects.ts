@@ -298,6 +298,18 @@ export async function deleteProject(id: string): Promise<void> {
   }
 }
 
+/** DELETE /api/projects */
+export async function deleteAllProjects(): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/api/projects`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message || `Couldn't delete all projects (${res.status}).`);
+  }
+}
+
 /** POST /api/projects/:id/approve */
 export async function approveProject(id: string): Promise<void> {
   const res = await fetch(`${BACKEND_URL}/api/projects/${id}/approve`, {
