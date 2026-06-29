@@ -36,7 +36,7 @@ COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 RUN pnpm install --frozen-lockfile --prod
 
-COPY --from=builder /app/apps/server/dist ./apps/server/dist
+COPY --from=builder /app/server/dist ./apps/server/dist
 COPY --from=builder /app/packages/ai/dist ./packages/ai/dist
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/inngest/dist ./packages/inngest/dist
