@@ -20,15 +20,13 @@ export async function generateStructured<S extends z.ZodType>(
   modelId: string,
   opts: { schema: S; system?: string; prompt: string }
 ): Promise<z.infer<S>> {
-  // OpenRouter free-tier and Cloudflare Workers AI models don't support
-  // function-calling tool mode, so fall back to JSON mode.
-  const useJsonMode = modelId.startsWith("free|") || modelId.startsWith("cloudflare|");
-
+  // AI SDK v6 auto-negotiates the structured-output strategy per provider,
+  // so the old `mode: "json"` fallback for OpenRouter free-tier / Cloudflare
+  // Workers AI is no longer needed (or accepted).
   const { object } = await generateObject({
     model: resolveModel(modelId),
     schema: opts.schema,
     messages: buildMessages(opts.system, opts.prompt),
-    ...(useJsonMode ? { mode: "json" as const } : {}),
   });
   return object as z.infer<S>;
 }
