@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { generateStructured, generateProse } from "@repo/ai";
 import type { ProcessingStage } from "../events.js";
-import { renderMockupSvg } from "./mockup.js";
+import { renderMockupSvg, type MockupSpec } from "./mockup.js";
 
 /** What every stage handler receives. `artifacts` holds prior stages' output. */
 export interface StageContext {
@@ -183,7 +183,7 @@ export const stageHandlers: Record<ProcessingStage, StageHandler> = {
       prompt: `Idea: ${idea}\n\nWhat we're building: ${JSON.stringify(artifacts["prd"] ?? artifacts["product_thinking"])}`,
     });
     // Deterministic, on-brand preview image rendered from the spec (no image model).
-    const imageSvg = renderMockupSvg(spec);
+    const imageSvg = renderMockupSvg(spec as MockupSpec);
     return { model, spec, imageSvg };
   }),
 
