@@ -1,4 +1,5 @@
 import { generateObject, generateText } from "ai";
+import type { ModelMessage } from "ai";
 import type { z } from "zod";
 import { resolveModel } from "./registry.js";
 
@@ -6,6 +7,13 @@ import { resolveModel } from "./registry.js";
  * Generation helpers the pipeline stage handlers call. The provider is
  * chosen purely by `modelId` — switch providers by switching the string.
  * ------------------------------------------------------------------ */
+
+function buildMessages(system: string | undefined, prompt: string): ModelMessage[] {
+  const msgs: ModelMessage[] = [];
+  if (system) msgs.push({ role: "system", content: system });
+  msgs.push({ role: "user", content: prompt });
+  return msgs;
+}
 
 /** Generate a Zod-validated structured object (e.g. a PRD, a task list). */
 export async function generateStructured<S extends z.ZodType>(
@@ -19,8 +27,7 @@ export async function generateStructured<S extends z.ZodType>(
   const { object } = await generateObject({
     model: resolveModel(modelId),
     schema: opts.schema,
-    system: opts.system,
-    prompt: opts.prompt,
+    messages: buildMessages(opts.system, opts.prompt),
     ...(useJsonMode ? { mode: "json" as const } : {}),
   });
   return object as z.infer<S>;
@@ -33,8 +40,7 @@ export async function generateProse(
 ): Promise<string> {
   const { text } = await generateText({
     model: resolveModel(modelId),
-    system: opts.system,
-    prompt: opts.prompt,
+    messages: buildMessages(opts.system, opts.prompt),
   });
   return text;
 }
