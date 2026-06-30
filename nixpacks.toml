@@ -1,0 +1,17 @@
+# Nixpacks build config for Coolify — builds ONLY the server out of the
+# pnpm + turbo monorepo. Keep Coolify's "Base Directory" at the repo root (/)
+# so the @repo/* workspace packages are available to the build.
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+# Full install (incl. dev deps) so tsc + turbo are available for the build step.
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+# turbo builds the @repo/* workspace deps first (^build), then the server.
+cmds = ["pnpm turbo run build --filter=server"]
+
+[start]
+cmd = "node apps/server/dist/index.js"
