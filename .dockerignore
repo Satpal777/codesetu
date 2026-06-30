@@ -1,0 +1,23 @@
+# Keep host build artifacts and deps out of the build context so they don't
+# clobber the pnpm-managed node_modules / symlink tree created inside the image.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/.cache
+
+# VCS / local stuff
+.git
+.github
+.vscode
+.idea
+
+# Env files — provide these via Coolify env vars, not the image
+.env
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Docs / misc not needed at runtime
+*.md
+docs
