@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { authClient } from "../_lib/auth-client";
 import { listProjects, relativeTime } from "./_lib/projects";
@@ -22,6 +22,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ?? null;
 
@@ -34,6 +35,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleSignOut = async () => {
     try {
       await authClient.signOut();
+      // Signed-out users belong on the marketing landing page, not a bare dashboard.
+      router.replace("/");
     } catch (err) {
       console.error("Sign out failed:", err);
     }
@@ -67,8 +70,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="flex h-full w-[236px] min-w-[236px] flex-shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--bg-raised)]">
         {/* Logo */}
         <div className="flex flex-shrink-0 items-center gap-2 border-b border-[var(--border-subtle)] px-[18px] py-4">
-          <span className="inline-flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[3px] bg-[var(--ink-950)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round">
+          <span className="inline-flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[3px] bg-[var(--ink-950)] text-[var(--white)]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <path d="M3 16 Q12 4 21 16" />
               <line x1="3" y1="16" x2="3" y2="20" />
               <line x1="21" y1="16" x2="21" y2="20" />

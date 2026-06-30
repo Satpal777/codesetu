@@ -10,13 +10,6 @@ import ThemeToggle from "../_components/theme-toggle";
 import DeleteProjectModal from "./_components/delete-project-modal";
 import DeleteAllProjectsModal from "./_components/delete-all-projects-modal";
 
-const SUGGESTIONS = [
-  "Landing page for my SaaS",
-  "Internal admin dashboard",
-  "Marketing site + blog",
-  "REST API + dashboard",
-  "App onboarding flow",
-];
 
 const TEMPLATES: { title: string; prompt: string }[] = [
   {
@@ -162,19 +155,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Suggestion Chips */}
-        <div className="flex flex-wrap gap-2 mb-3.5">
-          {SUGGESTIONS.map((sug) => (
-            <button
-              key={sug}
-              type="button"
-              onClick={() => setPrompt(sug)}
-              className="press cursor-pointer rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-3.5 py-1 font-mono text-[11px] tracking-wide text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
-            >
-              {sug}
-            </button>
-          ))}
-        </div>
+  
 
         {/* Composer Box */}
         <div ref={composerRef}>
@@ -234,7 +215,7 @@ export default function DashboardPage() {
                       <span className="text-[13px] font-semibold leading-snug text-[var(--text-primary)] truncate max-w-[200px]">
                         {p.title}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] border border-[var(--border-default)] rounded px-1.5 py-[2px] bg-[var(--bg-inset)]">
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] border border-[var(--border-default)] rounded px-1.5 py-[2px] bg-[var(--bg-inset)] transition-opacity group-hover:opacity-0">
                         {statusLabel}
                       </span>
                     </div>

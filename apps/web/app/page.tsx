@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import BridgeFlow from "./_components/bridge-flow";
 import ThemeToggle from "./_components/theme-toggle";
@@ -125,8 +126,16 @@ const FLOW_CAPTIONS = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const { data: session, isPending: loadingUser } = authClient.useSession();
   const user = session?.user ? (session.user as unknown as UserResponse) : null;
+
+  // Logged-in users skip the marketing page and land straight on their dashboard.
+  useEffect(() => {
+    if (!loadingUser && user) {
+      router.replace("/dashboard");
+    }
+  }, [loadingUser, user, router]);
 
   // Auth UX state — without this, a failed/slow sign-in looks like a dead button.
   const [authPending, setAuthPending] = useState(false);
@@ -162,6 +171,16 @@ export default function Home() {
     if (user) window.location.href = "/dashboard";
     else handleGoogleLogin();
   };
+
+  // A signed-in session is being redirected to /dashboard — show a spinner
+  // instead of flashing the marketing page on the way out.
+  if (!loadingUser && user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--paper)]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--ink-200)] border-t-[var(--ink-950)]" />
+      </div>
+    );
+  }
 
   return (
     <div className="cs-landing flex min-h-screen flex-col overflow-x-hidden">

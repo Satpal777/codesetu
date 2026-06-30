@@ -211,6 +211,11 @@ export const AgentController = {
     }
     h2 { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
     p { font-size: 11px; color: #666; margin: 0; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0a0a0a; color: #f4f4f4; }
+      .spinner { border-color: #2a2a2a; border-top-color: #f4f4f4; }
+      p { color: #8a8a8a; }
+    }
   </style>
 </head>
 <body>

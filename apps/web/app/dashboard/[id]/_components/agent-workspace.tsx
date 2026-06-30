@@ -186,7 +186,7 @@ export default function AgentWorkspace({
         </div>
 
         {/* Message window */}
-        <div className="flex-1 space-y-5 overflow-y-auto p-4 bg-white">
+        <div className="flex-1 space-y-5 overflow-y-auto p-4 bg-[var(--bg-raised)]">
           {turns.map((turn, i) => {
             const isUser = turn.role === "user";
             
@@ -199,8 +199,8 @@ export default function AgentWorkspace({
               >
                 {/* Assistant icon */}
                 {!isUser && (
-                  <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[3px] bg-[var(--ink-950)] text-white">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round">
+                  <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[3px] bg-[var(--ink-950)] text-[var(--white)]">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                       <path d="M3 16 Q12 4 21 16" />
                       <line x1="3" y1="16" x2="3" y2="20" />
                       <line x1="21" y1="16" x2="21" y2="20" />
@@ -296,7 +296,7 @@ export default function AgentWorkspace({
       </div>
 
       {/* Preview pane */}
-      <div className="overflow-hidden rounded border border-[var(--border-default)] bg-white shadow-sm flex flex-col">
+      <div className="overflow-hidden rounded border border-[var(--border-default)] bg-[var(--bg-raised)] shadow-sm flex flex-col">
         <div className="flex h-8 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)]" />
@@ -318,7 +318,7 @@ export default function AgentWorkspace({
             <span className="font-mono text-[10px] text-[var(--text-tertiary)] tracking-wider">PREVIEW</span>
           </div>
         </div>
-        <iframe key={previewKey} src={previewUrl} className="flex-1 w-full bg-white" title="Live preview" />
+        <iframe key={previewKey} src={previewUrl} className="flex-1 w-full bg-[var(--bg-raised)]" title="Live preview" />
       </div>
     </div>
   );

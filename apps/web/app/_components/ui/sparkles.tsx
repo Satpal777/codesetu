@@ -29,7 +29,8 @@ export const SparklesCore = (props: {
     direction = "none",
   } = props;
   const [init, setInit] = useState(false);
-  
+  const [loaded, setLoaded] = useState(false);
+
   useEffect(() => {
     initParticlesEngine(async (engine) => {
       await loadSlim(engine);
@@ -39,14 +40,23 @@ export const SparklesCore = (props: {
   }, []);
   const controls = useAnimation();
 
-  const particlesLoaded = async (container?: Container) => {
-    if (container) {
+  // Fade the particles in once they've loaded. Running this from an effect
+  // (rather than directly in the tsparticles callback) guarantees the motion
+  // component has mounted before controls.start() is called.
+  useEffect(() => {
+    if (loaded) {
       controls.start({
         opacity: 1,
         transition: {
           duration: 1,
         },
       });
+    }
+  }, [loaded, controls]);
+
+  const particlesLoaded = async (container?: Container) => {
+    if (container) {
+      setLoaded(true);
     }
   };
 
